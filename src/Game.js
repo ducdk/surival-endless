@@ -132,18 +132,6 @@ class Game {
           case 'Q':
             this.activateCharacterSkill('Whirlwind');
             break;
-          case 'e':
-          case 'E':
-            this.activateCharacterSkill('Power Attack');
-            break;
-          case 'r':
-          case 'R':
-            this.activateCharacterSkill('Second Wind');
-            break;
-          case 'f':
-          case 'F':
-            this.activateCharacterSkill('Dash');
-            break;
         }
       }
     });
@@ -610,7 +598,7 @@ class Game {
  
     // Check if Triple Eff skill is active
     const tripleEffSkill = this.character.getSkill('Triple Eff');
-    const useTripleEff = tripleEffSkill && tripleEffSkill.currentLevel > 0;
+    const useTripleEff = tripleEffSkill && tripleEffSkill.currentLevel > 0 && tripleEffSkill.cooldown <= 0;
     
     if (useTripleEff && this.character.canAttack()) {
       // Find up to 3 closest monsters within attack range
@@ -656,6 +644,11 @@ class Game {
               target.y + target.height/2,
               '#ff0000'
             );
+          }
+          
+          // Activate Triple Eff cooldown
+          if (tripleEffSkill) {
+            tripleEffSkill.cooldown = tripleEffSkill.maxCooldown;
           }
           
           // Play attack sound
@@ -894,95 +887,8 @@ class Game {
     // Whirlwind is a passive skill, so don't activate it
     if (skillName === 'Whirlwind') return;
     
-    // Try to activate the skill
-    const skill = this.character.activateSkill(skillName);
-    if (skill) {
-      // Add visual effect for the skill
-      this.addSkillEffect(
-        this.character.x + this.character.width/2,
-        this.character.y + this.character.height/2,
-        skillName
-      );
-      
-      // Play skill sound
-      this.soundManager.playSound('skill');
-      
-      // Handle skill-specific effects
-      switch(skillName) {
-        case 'Power Attack':
-          this.activatePowerAttackSkill();
-          break;
-        case 'Second Wind':
-          this.activateSecondWindSkill();
-          break;
-        case 'Dash':
-          this.activateDashSkill();
-          break;
-      }
-    }
-  }
-  
-  // Activate Power Attack skill - increase next attack damage
-  activatePowerAttackSkill() {
-    // This is a buff that will be applied to the next attack
-    // We'll store this in the character for the next attack
-    const skill = this.character.getSkill('Power Attack');
-    if (!skill) return;
-    
-    // Store the bonus damage to be applied on next attack
-    this.character.powerAttackBonus = skill.getEffectValue();
-  }
-  
-  // Activate Second Wind skill - heal when health is low
-  activateSecondWindSkill() {
-    const skill = this.character.getSkill('Second Wind');
-    if (!skill) return;
-    
-    const healAmount = skill.getEffectValue();
-    this.character.heal(healAmount);
-    
-    // Add healing effect
-    this.addSkillEffect(
-      this.character.x + this.character.width/2,
-      this.character.y + this.character.height/2,
-      'Second Wind'
-    );
-  }
-  
-  // Activate Dash skill - move quickly in current direction
-  activateDashSkill() {
-    const skill = this.character.getSkill('Dash');
-    if (!skill) return;
-    
-    // Store dash information for the next update
-    this.character.dashSpeed = skill.getEffectValue();
-    this.character.dashDuration = 200; // milliseconds
-    
-    // Move the character in the current direction of movement
-    let dx = 0;
-    let dy = 0;
-    
-    if (this.keys['ArrowUp'] || this.keys['w']) dy -= 1;
-    if (this.keys['ArrowDown'] || this.keys['s']) dy += 1;
-    if (this.keys['ArrowLeft'] || this.keys['a']) dx -= 1;
-    if (this.keys['ArrowRight'] || this.keys['d']) dx += 1;
-    
-    // Normalize diagonal movement
-    if (dx !== 0 && dy !== 0) {
-      dx *= 0.7071; // 1/sqrt(2)
-      dy *= 0.7071;
-    }
-    
-    // If no direction keys are pressed, dash forward based on last movement
-    if (dx === 0 && dy === 0) {
-      // Default to dashing right if no direction is specified
-      dx = 1;
-    }
-    
-    // Apply dash movement
-    const dashDistance = this.character.speed * this.character.dashSpeed * 2;
-    this.character.x += dx * dashDistance;
-    this.character.y += dy * dashDistance;
+    // Power Attack and Second Wind are passive skills, so don't activate them
+    if (skillName === 'Power Attack' || skillName === 'Second Wind') return;
   }
   
   renderAttackEffects() {
@@ -1506,12 +1412,6 @@ class Game {
         color = '#2ecc71'; // Green for healing
         size = 30;
         maxLife = 1500;
-        break;
-      case 'Dash':
-        color = '#f1c40f'; // Yellow for movement
-        size = 10;
-        maxLife = 400;
-        break;
     }
     
     // Create the effect
@@ -1533,22 +1433,22 @@ class Game {
     const skillBoxSpacing = 10;
     const skills = this.character.getUnlockedSkills();
     
-    // Only show active skills with level > 0
-    const activeSkills = skills.filter(skill => skill.type === 'active' && skill.currentLevel > 0);
-    
-    // Render each skill in a box
-    for (let i = 0; i < activeSkills.length; i++) {
-      const skill = activeSkills[i];
-      const boxX = x + i * (skillBoxSize + skillBoxSpacing);
+    // Show up to 4 skills per row
+    for (let i = 0; i < skills.length; i++) {
+      const skill = skills[i];
+      const row = Math.floor(i / 4);
+      const col = i % 4;
+      const boxX = x + col * (skillBoxSize + skillBoxSpacing);
+      const boxY = y + row * (skillBoxSize + skillBoxSpacing);
       
       // Draw skill box background
       this.ctx.fillStyle = '#333';
-      this.ctx.fillRect(boxX, y, skillBoxSize, skillBoxSize);
+      this.ctx.fillRect(boxX, boxY, skillBoxSize, skillBoxSize);
       
       // Draw skill box border
       this.ctx.strokeStyle = '#555';
       this.ctx.lineWidth = 2;
-      this.ctx.strokeRect(boxX, y, skillBoxSize, skillBoxSize);
+      this.ctx.strokeRect(boxX, boxY, skillBoxSize, skillBoxSize);
       
       // Draw skill name (abbreviated)
       this.ctx.fillStyle = 'white';
@@ -1557,23 +1457,23 @@ class Game {
       if (skillName.length > 8) {
         skillName = skillName.substring(0, 8) + '...';
       }
-      this.ctx.fillText(skillName, boxX + 5, y + 15);
+      this.ctx.fillText(skillName, boxX + 5, boxY + 15);
       
       // Draw skill level
-      this.ctx.fillText(`Lvl: ${skill.currentLevel}`, boxX + 5, y + 30);
+      this.ctx.fillText(`Lvl: ${skill.currentLevel}`, boxX + 5, boxY + 30);
       
       // Draw cooldown timer if skill is on cooldown
       if (skill.cooldown > 0) {
         // Dark overlay to indicate cooldown
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        this.ctx.fillRect(boxX, y, skillBoxSize, skillBoxSize);
+        this.ctx.fillRect(boxX, boxY, skillBoxSize, skillBoxSize);
         
         // Cooldown time in seconds
         const cooldownSeconds = Math.ceil(skill.cooldown / 1000);
         this.ctx.fillStyle = 'white';
         this.ctx.font = '20px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(`${cooldownSeconds}`, boxX + skillBoxSize / 2, y + skillBoxSize / 2 + 8);
+        this.ctx.fillText(`${cooldownSeconds}`, boxX + skillBoxSize / 2, boxY + skillBoxSize / 2 + 8);
         this.ctx.textAlign = 'left';
         this.ctx.font = '12px Arial';
       }

@@ -22,44 +22,47 @@
                 <button id="shopButton" class="game-button">Shop (P)</button>
             </div>
             
-            <!-- Character Info -->
-            <div class="character-info">
-                <h2>Your Character</h2>
-                <div class="character-stats">
-                    <div class="stat">
-                        <span class="stat-label">Health:</span>
-                        <span id="characterHealth" class="stat-value">500</span>
+            <div class="" style="overflow: auto; max-height: 67.5vh;">
+                <!-- Character Info -->
+                <div class="character-info">
+                    <h2>Your Character</h2>
+                    <div class="character-stats">
+                        <div class="stat">
+                            <span class="stat-label">Health:</span>
+                            <span id="characterHealth" class="stat-value">500</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Damage:</span>
+                            <span id="characterDamage" class="stat-value">10</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Speed:</span>
+                            <span id="characterSpeed" class="stat-value">5</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Gold:</span>
+                            <span id="characterGold" class="stat-value">0</span>
+                        </div>
                     </div>
-                    <div class="stat">
-                        <span class="stat-label">Damage:</span>
-                        <span id="characterDamage" class="stat-value">10</span>
+                </div>
+                
+                <!-- Equipment Info -->
+                <div class="equipment-info">
+                    <h2>Your Equipment</h2>
+                    <div id="equipmentList" class="equipment-list">
+                        <p>No equipment purchased yet</p>
                     </div>
-                    <div class="stat">
-                        <span class="stat-label">Speed:</span>
-                        <span id="characterSpeed" class="stat-value">5</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Gold:</span>
-                        <span id="characterGold" class="stat-value">0</span>
+                </div>
+                
+                <!-- Skills Info -->
+                <div class="skills-info">
+                    <h2>Your Skills</h2>
+                    <div id="skillsList" class="skills-list">
+                        <p>No skills unlocked yet</p>
                     </div>
                 </div>
             </div>
             
-            <!-- Equipment Info -->
-            <div class="equipment-info">
-                <h2>Your Equipment</h2>
-                <div id="equipmentList" class="equipment-list">
-                    <p>No equipment purchased yet</p>
-                </div>
-            </div>
-            
-            <!-- Skills Info -->
-            <div class="skills-info">
-                <h2>Your Skills</h2>
-                <div id="skillsList" class="skills-list">
-                    <p>No skills unlocked yet</p>
-                </div>
-            </div>
         </div>
     </div>
     <script src="src/main.js" type="module"></script>

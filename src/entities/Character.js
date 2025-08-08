@@ -23,9 +23,8 @@ class Character {
     this.skills = []; // Skills array
     
     // Skill-related properties
-    this.powerAttackBonus = 0; // Bonus damage for Power Attack skill
-    this.dashSpeed = 0; // Dash speed multiplier
-    this.dashDuration = 0; // Remaining dash duration
+    this.secondWindTimer = 0; // Timer for Second Wind passive healing
+    this.secondWindInterval = 5000; // Heal every 5 seconds (5000ms)
     
     // Whirlwind skill properties
     this.whirlwindBalls = []; // Array to store ball positions
@@ -67,10 +66,16 @@ class Character {
       }
     }
     
-    // Update dash duration
-    if (this.dashDuration > 0) {
-      this.dashDuration -= deltaTime;
-      if (this.dashDuration < 0) this.dashDuration = 0;
+    // Update Second Wind passive healing
+    const secondWindSkill = this.getSkill('Second Wind');
+    if (secondWindSkill && secondWindSkill.currentLevel > 0) {
+      this.secondWindTimer += deltaTime;
+      if (this.secondWindTimer >= this.secondWindInterval) {
+        // Heal a small amount
+        const healAmount = secondWindSkill.getEffectValue() / 10; // Heal 10% of the skill's value per interval
+        this.heal(healAmount);
+        this.secondWindTimer = 0; // Reset timer
+      }
     }
     
     // Update whirlwind rotation and radius
@@ -166,11 +171,8 @@ class Character {
   }
 
   move(dx, dy) {
-    // Apply dash speed if dashing
+    // Move at normal speed
     let speed = this.speed;
-    if (this.dashDuration > 0) {
-      speed *= this.dashSpeed;
-    }
     
     this.x += dx * speed;
     this.y += dy * speed;
@@ -184,9 +186,12 @@ class Character {
     if (this.canAttack()) {
       // Calculate damage including Power Attack bonus
       let damage = this.damage;
-      if (this.powerAttackBonus > 0) {
-        damage += this.powerAttackBonus;
-        this.powerAttackBonus = 0; // Reset bonus after use
+      const powerAttackSkill = this.getSkill('Power Attack');
+      if (powerAttackSkill && powerAttackSkill.currentLevel > 0 && powerAttackSkill.isReady()) {
+        // Always apply Power Attack bonus for passive version
+        damage += powerAttackSkill.getEffectValue();
+        // Activate skill cooldown
+        powerAttackSkill.activate();
       }
       
       monster.takeDamage(damage);
@@ -248,21 +253,23 @@ class Character {
       type: 'chance',
       baseValue: 5,
       perLevel: 5,
-      description: 'Chance to deal increased damage on attacks'
+      description: 'Chance to deal increased damage on attacks',
+      cooldown: 5000 // 5 seconds
     }, 5, 3, 100));
     
     this.skills.push(new Skill('Whirlwind', 'passive', {
       type: 'damage',
       baseValue: 50,
       perLevel: 25,
-      description: '6 balls orbit character dealing damage to nearby enemies'
+      description: '6 balls orbit character dealing damage to nearby enemies',
+      cooldown: 1000 // 1 second
     }, 5, 5, 150));
     
-    this.skills.push(new Skill('Power Attack', 'active', {
+    this.skills.push(new Skill('Power Attack', 'passive', {
       type: 'damage',
       baseValue: 150,
       perLevel: 30,
-      description: 'Next attack deals increased damage',
+      description: 'Always deal increased damage on attacks',
       cooldown: 10000 // 10 seconds
     }, 5, 7, 120));
     
@@ -271,60 +278,57 @@ class Character {
       type: 'heal',
       baseValue: 1,
       perLevel: 1,
-      description: 'Regenerate health over time'
+      description: 'Regenerate health over time',
+      cooldown: 1000 // 1 second
     }, 5, 4, 100));
     
     this.skills.push(new Skill('Damage Reduction', 'passive', {
       type: 'chance',
       baseValue: 2,
       perLevel: 2,
-      description: 'Reduce incoming damage'
+      description: 'Reduce incoming damage',
+      cooldown: 1000 // 1 second
     }, 5, 6, 150));
     
-    this.skills.push(new Skill('Second Wind', 'active', {
+    this.skills.push(new Skill('Second Wind', 'passive', {
       type: 'heal',
       baseValue: 30,
       perLevel: 5,
-      description: 'Instantly heal when health drops below 20%',
-      cooldown: 60000 // 60 seconds
+      description: 'Automatically heal a small amount every few seconds',
+      cooldown: 30000 // 30 seconds
     }, 3, 8, 200));
     
-    // Movement Skills
-    this.skills.push(new Skill('Dash', 'active', {
-      type: 'movement',
-      baseValue: 2,
-      perLevel: 1,
-      description: 'Quickly move in a direction',
-      cooldown: 8000 // 8 seconds
-    }, 3, 5, 120));
     
     this.skills.push(new Skill('Evasion', 'passive', {
       type: 'chance',
       baseValue: 5,
       perLevel: 5,
-      description: 'Chance to avoid incoming attacks'
+      description: 'Chance to avoid incoming attacks',
+      cooldown: 1000 // 1 second
     }, 5, 7, 150));
-    
     // Utility Skills
     this.skills.push(new Skill('Gold Finder', 'passive', {
       type: 'chance',
       baseValue: 5,
       perLevel: 5,
-      description: 'Increase gold dropped by enemies'
+      description: 'Increase gold dropped by enemies',
+      cooldown: 1000 // 1 second
     }, 5, 4, 100));
     
     this.skills.push(new Skill('Experience Boost', 'passive', {
       type: 'chance',
       baseValue: 10,
       perLevel: 10,
-      description: 'Increase experience gained from enemies'
+      description: 'Increase experience gained from enemies',
+      cooldown: 1000 // 1 second
     }, 5, 6, 120));
     
     this.skills.push(new Skill('Resource Magnet', 'passive', {
       type: 'range',
       baseValue: 20,
       perLevel: 20,
-      description: 'Increase pickup range for resources'
+      description: 'Increase pickup range for resources',
+      cooldown: 1000 // 1 second
     }, 3, 9, 180));
     
     // New Triple Eff skill
@@ -332,7 +336,8 @@ class Character {
       type: 'attack',
       baseValue: 1,
       perLevel: 0,
-      description: 'Shoot 3 lines at 3 targets instead of 1 basic line'
+      description: 'Shoot 3 lines at 3 targets instead of 1 basic line',
+      cooldown: 1000 // 1 second
     }, 1, 10, 200));
   }
   
