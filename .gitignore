@@ -1,4 +1,10 @@
-# General
+# IDE and Editor Files
+.idea
+.vscode
+*.sublime-workspace
+*.sublime-project
+
+# Temporary and Backup Files
 *.swp
 *.swo
 *.back
@@ -8,12 +14,6 @@
 *.temp
 *.DS_Store
 Thumbs.db
-
-# IDE Specific
-.idea
-.vscode
-*.sublime-workspace
-*.sublime-project
 
 # Local Development
 .env
@@ -26,7 +26,7 @@ package-lock.json
 npmignore
 yarnignore
 
-# Temporary Build Files
+# Build Artifacts
 *.exe
 *.dll
 *.so
@@ -37,16 +37,6 @@ yarnignore
 *.lib
 *.out
 *.dll.config
-*.DS_Store
-
-# Editor Auto-Save Files
-*.autosave
-*.auto-save
-*.~.njs
-*.~.ts
-*.~.js
-*.~.html
-*.~.css
 
 # Testing
 coverage/
@@ -55,20 +45,15 @@ coverage/
 *.test.js
 *.spec.js
 
-# Deployment
-dist/
-build/
-out/
-
 # Logs and Databases
 *.sqlite
 *.db
 *.sql
 *.log*
 
-# IDE Temporary Files
-*.#*
-*.~*.*
-*._*.*
+# Deployment
+dist/
+build/
+out/
 
-# Add any custom patterns specific to your project below this line
+# Add custom patterns here

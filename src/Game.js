@@ -166,7 +166,87 @@ class Game {
         this.state = 'shop';
       });
     }
-  }
+      
+      // Mouse input for shop
+      this.canvas.addEventListener('click', (e) => {
+        if (this.state === 'shop') {
+          this.handleShopClick(e);
+        }
+      });
+    }
+    
+    // Convert mouse event coordinates to canvas coordinates
+    getCanvasCoordinates(e) {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (this.canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (this.canvas.height / rect.height);
+      return { x, y };
+    }
+    
+    // Handle shop clicks
+    handleShopClick(e) {
+      const { x, y } = this.getCanvasCoordinates(e);
+      
+      // Check equipment items
+      const equipmentClicked = this.checkEquipmentClick(x, y);
+      if (equipmentClicked !== -1) {
+        this.purchaseEquipment(equipmentClicked);
+        return;
+      }
+      
+      // Check skill items
+      const skillClicked = this.checkSkillClick(x, y);
+      if (skillClicked !== -1) {
+        this.purchaseSkill(skillClicked);
+        return;
+      }
+    }
+    
+    // Check if an equipment item was clicked
+    checkEquipmentClick(x, y) {
+      const equipmentTypes = ['sword', 'shield', 'boots', 'amulet'];
+      const itemWidth = 150;
+      const itemHeight = 100;
+      const itemSpacing = 20;
+      const startX = (this.width - (equipmentTypes.length * itemWidth + (equipmentTypes.length - 1) * itemSpacing)) / 2;
+      const startY = 180;
+      
+      for (let i = 0; i < equipmentTypes.length; i++) {
+        const itemX = startX + i * (itemWidth + itemSpacing);
+        const itemY = startY;
+        
+        // Check if click is within item bounds
+        if (x >= itemX && x <= itemX + itemWidth && y >= itemY && y <= itemY + itemHeight) {
+          return i;
+        }
+      }
+      
+      return -1; // No equipment item clicked
+    }
+    
+    // Check if a skill item was clicked
+    checkSkillClick(x, y) {
+      const availableSkills = this.character.getAvailableSkills();
+      const skillWidth = 200;
+      const skillHeight = 80;
+      const skillSpacing = 15;
+      const skillStartX = (this.width - (Math.min(3, availableSkills.length) * skillWidth + (Math.min(3, availableSkills.length) - 1) * skillSpacing)) / 2;
+      const skillStartY = 180 + 100 + 50; // Equipment items height + spacing
+      
+      for (let i = 0; i < availableSkills.length; i++) {
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        const skillX = skillStartX + col * (skillWidth + skillSpacing);
+        const skillY = skillStartY + row * (skillHeight + skillSpacing);
+        
+        // Check if click is within skill bounds
+        if (x >= skillX && x <= skillX + skillWidth && y >= skillY && y <= skillY + skillHeight) {
+          return i;
+        }
+      }
+      
+      return -1; // No skill item clicked
+    }
   
   applyLevelUpChoice() {
     switch(this.levelUpChoice) {
@@ -528,8 +608,62 @@ class Game {
       }
     }
  
-    // If there's a closest monster within range and character can attack, attack it
-    if (closestMonster && this.character.canAttack()) {
+    // Check if Triple Eff skill is active
+    const tripleEffSkill = this.character.getSkill('Triple Eff');
+    const useTripleEff = tripleEffSkill && tripleEffSkill.currentLevel > 0;
+    
+    if (useTripleEff && this.character.canAttack()) {
+      // Find up to 3 closest monsters within attack range
+      const monstersInRange = [];
+      const attackRange = 400;
+      
+      for (const monster of this.monsters) {
+        const distance = Math.sqrt(
+          Math.pow(this.character.x + this.character.width/2 - (monster.x + monster.width/2), 2) +
+          Math.pow(this.character.y + this.character.height/2 - (monster.y + monster.height/2), 2)
+        );
+        
+        if (distance < attackRange) {
+          monstersInRange.push({ monster, distance });
+        }
+      }
+      
+      // Sort by distance and take up to 3 closest
+      monstersInRange.sort((a, b) => a.distance - b.distance);
+      const targets = monstersInRange.slice(0, 3).map(item => item.monster);
+      
+      // Attack each target
+      if (targets.length > 0) {
+        const attackSuccessful = this.character.attack(targets[0]);
+        if (attackSuccessful) {
+          console.log('Character successfully attacked monsters with Triple Eff');
+          
+          // Attack all targets
+          for (const target of targets) {
+            target.takeDamage(this.character.damage);
+            
+            // Add visual feedback for attack
+            this.addAttackEffect(
+              this.character.x + this.character.width/2,
+              this.character.y + this.character.height/2,
+              target.x + target.width/2,
+              target.y + target.height/2
+            );
+            
+            // Add hit effect at monster location
+            this.addHitEffect(
+              target.x + target.width/2,
+              target.y + target.height/2,
+              '#ff0000'
+            );
+          }
+          
+          // Play attack sound
+          this.soundManager.playSound('attack');
+        }
+      }
+    } else if (closestMonster && this.character.canAttack()) {
+      // Original single target attack logic
       const attackSuccessful = this.character.attack(closestMonster);
       if (attackSuccessful) {
         console.log('Character successfully attacked monster');
@@ -1116,7 +1250,7 @@ class Game {
     // Exit instructions
     this.ctx.textAlign = 'center';
     this.ctx.fillText('Press ESC to exit shop', this.width / 2, this.height - 50);
-    this.ctx.fillText('Press number key to purchase item', this.width / 2, this.height - 30);
+    this.ctx.fillText('Click items to purchase', this.width / 2, this.height - 30);
   }
   
   startGame() {

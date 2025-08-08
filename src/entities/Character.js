@@ -326,6 +326,14 @@ class Character {
       perLevel: 20,
       description: 'Increase pickup range for resources'
     }, 3, 9, 180));
+    
+    // New Triple Eff skill
+    this.skills.push(new Skill('Triple Eff', 'passive', {
+      type: 'attack',
+      baseValue: 1,
+      perLevel: 0,
+      description: 'Shoot 3 lines at 3 targets instead of 1 basic line'
+    }, 1, 10, 200));
   }
   
   // Get available skills for current level
