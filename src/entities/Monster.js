@@ -1,3 +1,5 @@
+import Bullet from './Bullet.js';
+
 // Monster entity for the Endless Survival game
 class Monster {
   constructor(x, y, type = 'normal', difficulty = 1) {
@@ -64,9 +66,16 @@ class Monster {
     // Load monster image
     this.image = new Image();
     this.image.src = this.imagePath;
+    
+    // Ranged attack properties (only for ranged monsters)
+    if (this.type === 'ranged') {
+      this.bullets = [];
+      this.attackCooldown = 0;
+      this.attackCooldownTime = 1500; // milliseconds
+    }
   }
 
-  update(playerX, playerY) {
+  update(playerX, playerY, deltaTime = 16) {
     // Different AI behaviors based on monster type
     switch (this.type) {
       case 'ranged':
@@ -88,6 +97,17 @@ class Monster {
             this.y += (dy / distance) * this.speed * 0.5;
           }
         }
+        
+        // Check if player is within attack range and monster can attack
+        if (distance < this.range && this.canAttack()) {
+          this.attack(playerX, playerY);
+        }
+        
+        // Update attack cooldown
+        this.updateAttackCooldown(deltaTime);
+        
+        // Update bullets
+        this.updateBullets(deltaTime);
         break;
         
       case 'fast':
@@ -167,11 +187,78 @@ class Monster {
     ctx.fillRect(this.x, this.y - 8, this.width, 3);
     ctx.fillStyle = '#2ecc71';
     ctx.fillRect(this.x, this.y - 8, (this.health / this.maxHealth) * this.width, 3);
+    
+    // Render bullets (only for ranged monsters)
+    this.renderBullets(ctx);
   }
 
   takeDamage(damage) {
     this.health -= damage;
     if (this.health < 0) this.health = 0;
+  }
+  
+  // Check if monster can attack (only for ranged monsters)
+  canAttack() {
+    if (this.type !== 'ranged') return false;
+    return this.attackCooldown <= 0;
+  }
+  
+  // Ranged attack method (only for ranged monsters)
+  attack(targetX, targetY) {
+    if (this.type !== 'ranged' || !this.canAttack()) return false;
+    
+    // Create a bullet
+    const bullet = new Bullet(
+      this.x + this.width / 2,
+      this.y + this.height / 2,
+      targetX,
+      targetY,
+      7, // speed (slower than player bullets)
+      this.damage,
+      '#9b59b6', // purple color for monster bullets
+      false // isPlayerBullet (false for monster bullets)
+    );
+    
+    this.bullets.push(bullet);
+    this.attackCooldown = this.attackCooldownTime;
+    console.log(`Ranged monster shoots bullet for ${this.damage} damage`);
+    return true;
+  }
+  
+  // Update bullets (only for ranged monsters)
+  updateBullets(deltaTime) {
+    if (this.type !== 'ranged' || !this.bullets) return;
+    
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+      const bullet = this.bullets[i];
+      bullet.update(deltaTime);
+      
+      // Remove bullets that have expired or gone off-screen
+      if (!bullet.isAlive() ||
+          bullet.x < -100 || bullet.x > 2000 ||
+          bullet.y < -100 || bullet.y > 2000) {
+        this.bullets.splice(i, 1);
+      }
+    }
+  }
+  
+  // Render bullets (only for ranged monsters)
+  renderBullets(ctx) {
+    if (this.type !== 'ranged' || !this.bullets) return;
+    
+    for (const bullet of this.bullets) {
+      bullet.render(ctx);
+    }
+  }
+  
+  // Update attack cooldown (only for ranged monsters)
+  updateAttackCooldown(deltaTime) {
+    if (this.type !== 'ranged') return;
+    
+    if (this.attackCooldown > 0) {
+      this.attackCooldown -= deltaTime;
+      if (this.attackCooldown < 0) this.attackCooldown = 0;
+    }
   }
 }
 

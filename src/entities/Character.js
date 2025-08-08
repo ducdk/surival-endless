@@ -1,4 +1,5 @@
 import Skill from './Skill.js';
+import Bullet from './Bullet.js';
 
 // Character entity for the Endless Survival game
 class Character {
@@ -21,6 +22,7 @@ class Character {
     this.levelUpNotificationTime = 0;
     this.inventory = []; // Equipment inventory
     this.skills = []; // Skills array
+    this.bullets = []; // Bullets array
     
     // Skill-related properties
     this.secondWindTimer = 0; // Timer for Second Wind passive healing
@@ -29,8 +31,8 @@ class Character {
     // Whirlwind skill properties
     this.whirlwindBalls = []; // Array to store ball positions
     this.whirlwindRotation = 0; // Current rotation angle
-    this.whirlwindRadius = 40; // Radius of the whirlwind
-    this.whirlwindBallCount = 6; // Number of balls
+    this.whirlwindRadius = 90; // Initial radius of the whirlwind (matches level 1 with new formula)
+    this.whirlwindBallCount = 10; // Number of balls
     
     // Load character image
     this.image = new Image();
@@ -85,8 +87,8 @@ class Character {
       const rotationSpeed = 0.05 + (whirlwindSkill.currentLevel * 0.01);
       this.whirlwindRotation += rotationSpeed * (deltaTime / 16); // Normalize to 60fps
       
-      // Radius increases with skill level (base 40, +5 per level)
-      const radius = 40 + (whirlwindSkill.currentLevel * 5);
+      // Radius increases with skill level (base 80, +10 per level)
+      const radius = 80 + (whirlwindSkill.currentLevel * 10);
       
       // Update ball positions
       for (let i = 0; i < this.whirlwindBalls.length; i++) {
@@ -99,6 +101,9 @@ class Character {
     
     // Update skills
     this.updateSkills(deltaTime);
+    
+    // Update bullets
+    this.updateBullets(deltaTime);
   }
 
   render(ctx) {
@@ -132,6 +137,9 @@ class Character {
     ctx.fillRect(this.x, this.y - 10, this.width, 5);
     ctx.fillStyle = '#2ecc71';
     ctx.fillRect(this.x, this.y - 10, (this.health / this.maxHealth) * this.width, 5);
+    
+    // Render bullets
+    this.renderBullets(ctx);
   }
 
   takeDamage(damage) {
@@ -182,7 +190,7 @@ class Character {
     return this.attackCooldown <= 0;
   }
   
-  attack(monster) {
+  attack(targetX, targetY) {
     if (this.canAttack()) {
       // Calculate damage including Power Attack bonus
       let damage = this.damage;
@@ -194,12 +202,46 @@ class Character {
         powerAttackSkill.activate();
       }
       
-      monster.takeDamage(damage);
+      // Create a bullet
+      const bullet = new Bullet(
+        this.x + this.width / 2,
+        this.y + this.height / 2,
+        targetX,
+        targetY,
+        10, // speed
+        damage,
+        '#ffffff',
+        true // isPlayerBullet
+      );
+      
+      this.bullets.push(bullet);
       this.attackCooldown = this.attackCooldownTime;
-      console.log(`Character attacks monster for ${damage} damage`);
+      console.log(`Character shoots bullet for ${damage} damage`);
       return true;
     }
     return false;
+  }
+  
+  // Update bullets
+  updateBullets(deltaTime) {
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+      const bullet = this.bullets[i];
+      bullet.update(deltaTime);
+      
+      // Remove bullets that have expired or gone off-screen
+      if (!bullet.isAlive() ||
+          bullet.x < -100 || bullet.x > 2000 ||
+          bullet.y < -100 || bullet.y > 2000) {
+        this.bullets.splice(i, 1);
+      }
+    }
+  }
+  
+  // Render bullets
+  renderBullets(ctx) {
+    for (const bullet of this.bullets) {
+      bullet.render(ctx);
+    }
   }
   
   // Add equipment to inventory

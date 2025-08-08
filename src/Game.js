@@ -272,7 +272,7 @@ class Game {
       this.updateCharacter(deltaTime);
       
       // Update monsters
-      this.updateMonsters();
+      this.updateMonsters(deltaTime);
       
       // Update resources
       this.updateResources();
@@ -334,7 +334,7 @@ class Game {
     this.character.update(deltaTime);
   }
   
-  updateMonsters() {
+  updateMonsters(deltaTime) {
     // Limit the number of monsters for performance
     const maxMonsters = 100;
     if (this.monsters.length > maxMonsters) {
@@ -344,8 +344,8 @@ class Game {
     
     for (let i = this.monsters.length - 1; i >= 0; i--) {
       const monster = this.monsters[i];
-      monster.update(this.character.x + this.character.width/2, this.character.y + this.character.height/2);
-      monster.update();
+      monster.update(this.character.x + this.character.width/2, this.character.y + this.character.height/2, deltaTime);
+      
       
       // Remove dead monsters
       if (monster.health <= 0) {
@@ -622,7 +622,10 @@ class Game {
       
       // Attack each target
       if (targets.length > 0) {
-        const attackSuccessful = this.character.attack(targets[0]);
+        const attackSuccessful = this.character.attack(
+          targets[0].x + targets[0].width/2,
+          targets[0].y + targets[0].height/2
+        );
         if (attackSuccessful) {
           console.log('Character successfully attacked monsters with Triple Eff');
           
@@ -657,7 +660,10 @@ class Game {
       }
     } else if (closestMonster && this.character.canAttack()) {
       // Original single target attack logic
-      const attackSuccessful = this.character.attack(closestMonster);
+      const attackSuccessful = this.character.attack(
+        closestMonster.x + closestMonster.width/2,
+        closestMonster.y + closestMonster.height/2
+      );
       if (attackSuccessful) {
         console.log('Character successfully attacked monster');
         // Add visual feedback for attack
@@ -677,6 +683,73 @@ class Game {
         
         // Play attack sound
         this.soundManager.playSound('attack');
+      }
+    }
+    
+    // Check for character bullet collisions with monsters
+    for (let i = this.character.bullets.length - 1; i >= 0; i--) {
+      const bullet = this.character.bullets[i];
+      let hit = false;
+      
+      for (let j = this.monsters.length - 1; j >= 0; j--) {
+        const monster = this.monsters[j];
+        if (this.isCollidingWithBullet(monster, bullet)) {
+          // Character bullet hits monster
+          monster.takeDamage(bullet.damage);
+          this.character.bullets.splice(i, 1);
+          hit = true;
+          
+          // Add hit effect at monster location
+          this.addHitEffect(
+            monster.x + monster.width/2,
+            monster.y + monster.height/2,
+            '#ff0000'
+          );
+          
+          // Play attack sound
+          this.soundManager.playSound('attack');
+          break;
+        }
+      }
+      
+      // If bullet didn't hit anything and is off-screen, remove it
+      if (!hit && (bullet.x < -100 || bullet.x > this.width + 100 || bullet.y < -100 || bullet.y > this.height + 100)) {
+        this.character.bullets.splice(i, 1);
+      }
+    }
+    
+    // Check for monster bullet collisions with character
+    for (let i = this.monsters.length - 1; i >= 0; i--) {
+      const monster = this.monsters[i];
+      if (monster.type === 'ranged' && monster.bullets) {
+        for (let j = monster.bullets.length - 1; j >= 0; j--) {
+          const bullet = monster.bullets[j];
+          if (this.isCollidingWithBullet(this.character, bullet)) {
+            // Check if character dodges the attack using Evasion skill
+            const evasionSkill = this.character.getSkill('Evasion');
+            let takesDamage = true;
+            
+            if (evasionSkill && evasionSkill.currentLevel > 0) {
+              // Calculate dodge chance (5% base + 5% per level)
+              const dodgeChance = evasionSkill.getEffectValue() / 100;
+              if (Math.random() < dodgeChance) {
+                takesDamage = false;
+                console.log('Character dodged monster bullet!');
+              }
+            }
+            
+            // Monster bullet hits character
+            if (takesDamage) {
+              this.character.takeDamage(bullet.damage);
+            }
+            
+            monster.bullets.splice(j, 1);
+            // Play hit sound only if character takes damage
+            if (takesDamage) {
+              this.soundManager.playSound('playerHit');
+            }
+          }
+        }
       }
     }
     
@@ -712,6 +785,14 @@ class Game {
            rect1.x + rect1.width > rect2.x &&
            rect1.y < rect2.y + rect2.height &&
            rect1.y + rect1.height > rect2.y;
+  }
+  
+  // Check if a bullet collides with an entity
+  isCollidingWithBullet(entity, bullet) {
+    return entity.x < bullet.x + bullet.width &&
+           entity.x + entity.width > bullet.x &&
+           entity.y < bullet.y + bullet.height &&
+           entity.y + entity.height > bullet.y;
   }
   
   // Check if an entity is within the viewport
