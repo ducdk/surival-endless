@@ -1,0 +1,74 @@
+# General
+*.swp
+*.swo
+*.back
+*.old
+*.~*
+*.tmp
+*.temp
+*.DS_Store
+Thumbs.db
+
+# IDE Specific
+.idea
+.vscode
+*.sublime-workspace
+*.sublime-project
+
+# Local Development
+.env
+.env.local
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+package-lock.json
+npmignore
+yarnignore
+
+# Temporary Build Files
+*.exe
+*.dll
+*.so
+*.dylib
+*.obj
+*.o
+*.a
+*.lib
+*.out
+*.dll.config
+*.DS_Store
+
+# Editor Auto-Save Files
+*.autosave
+*.auto-save
+*.~.njs
+*.~.ts
+*.~.js
+*.~.html
+*.~.css
+
+# Testing
+coverage/
+*.test.ts
+*.spec.ts
+*.test.js
+*.spec.js
+
+# Deployment
+dist/
+build/
+out/
+
+# Logs and Databases
+*.sqlite
+*.db
+*.sql
+*.log*
+
+# IDE Temporary Files
+*.#*
+*.~*.*
+*._*.*
+
+# Add any custom patterns specific to your project below this line

@@ -1,0 +1,29 @@
+{
+  "name": "endless-survival",
+  "version": "1.0.0",
+  "description": "An endless survival web game where players control a character fighting against continuously spawning monsters",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "npx serve . -l 3030",
+    "dev": "npx serve . -l 8080",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "game",
+    "web-game",
+    "survival",
+    "endless",
+    "html5",
+    "canvas"
+  ],
+  "author": "Endless Survival Team",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.0"
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions"
+  ]
+}

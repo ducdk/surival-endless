@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endless Survival</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="welcome-screen">
+            <h1 class="game-title">ENDLESS SURVIVAL</h1>
+            <p class="game-subtitle">Survive as long as possible against endless waves of monsters</p>
+            
+            <!-- Buttons -->
+            <div class="welcome-buttons">
+                <button id="startButton" class="game-button">Start Game</button>
+                <button id="shopButton" class="game-button">Shop (P)</button>
+            </div>
+            
+            <!-- Character Info -->
+            <div class="character-info">
+                <h2>Your Character</h2>
+                <div class="character-stats">
+                    <div class="stat">
+                        <span class="stat-label">Health:</span>
+                        <span id="characterHealth" class="stat-value">500</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Damage:</span>
+                        <span id="characterDamage" class="stat-value">10</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Speed:</span>
+                        <span id="characterSpeed" class="stat-value">5</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Gold:</span>
+                        <span id="characterGold" class="stat-value">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Equipment Info -->
+            <div class="equipment-info">
+                <h2>Your Equipment</h2>
+                <div id="equipmentList" class="equipment-list">
+                    <p>No equipment purchased yet</p>
+                </div>
+            </div>
+            
+            <!-- Skills Info -->
+            <div class="skills-info">
+                <h2>Your Skills</h2>
+                <div id="skillsList" class="skills-list">
+                    <p>No skills unlocked yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="src/main.js" type="module"></script>
+</body>
+</html>
