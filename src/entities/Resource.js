@@ -15,7 +15,6 @@ class Resource {
     this.floatAmplitude = 5;
     
     // Timeout properties
-    this.lifeTime = 10000; // 10 seconds
     this.creationTime = Date.now();
     
     // Set properties based on resource type
@@ -23,18 +22,32 @@ class Resource {
       case 'health':
         this.color = '#e74c3c';
         this.value = 25; // Health points
+        // Health resources should still disappear after a period
+        this.lifeTime = 10; // 10 seconds
         break;
       case 'gold':
         this.color = '#f1c40f';
         this.value = 1; // Gold amount
+        // Gold resources should not disappear
+        this.lifeTime = 0; // No timeout
         break;
       case 'experience':
         this.color = '#9b59b6';
         this.value = 10; // Experience points
+        // Experience resources should not disappear
+        this.lifeTime = 0; // No timeout
+        break;
+      case 'blood':
+        this.color = '#ff0000';
+        this.value = 5; // Blood amount
+        // Blood resources should not disappear
+        this.lifeTime = 0; // No timeout
         break;
       default:
         this.color = '#3498db';
         this.value = 0;
+        // Default resources should still disappear after a period
+        this.lifeTime = 10000; // 10 seconds
     }
   }
 
@@ -43,8 +56,8 @@ class Resource {
     const time = Date.now() * this.animationSpeed;
     this.y = this.baseY + Math.sin(time + this.animationOffset) * this.floatAmplitude;
     
-    // Check if resource has expired
-    if (Date.now() - this.creationTime > this.lifeTime) {
+    // Check if resource has expired (only for resources with a lifetime)
+    if (this.lifeTime > 0 && Date.now() - this.creationTime > this.lifeTime) {
       this.collected = true;
     }
   }
@@ -78,6 +91,14 @@ class Resource {
       case 'experience':
         // Star shape for experience
         this.drawStar(ctx, this.x + this.width/2, this.y + this.height/2, 5, this.width/2, this.width/4);
+        break;
+      case 'blood':
+        // Diamond shape for blood
+        ctx.moveTo(this.x + this.width/2, this.y);
+        ctx.lineTo(this.x + this.width, this.y + this.height/2);
+        ctx.lineTo(this.x + this.width/2, this.y + this.height);
+        ctx.lineTo(this.x, this.y + this.height/2);
+        ctx.closePath();
         break;
       default:
         // Default square

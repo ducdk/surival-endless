@@ -559,9 +559,14 @@ class Game {
       this.resources.push(new Resource(x + 20, y, 'gold'));
     }
     
+    // Chance to drop blood
+    if (Math.random() < 0.3) {
+      this.resources.push(new Resource(x - 20, y, 'blood'));
+    }
+    
     // Chance to drop health (lower chance)
     if (Math.random() < 0.2) {
-      this.resources.push(new Resource(x - 20, y, 'health'));
+      this.resources.push(new Resource(x, y + 20, 'health'));
     }
   }
   
@@ -790,6 +795,10 @@ class Game {
             break;
           case 'experience':
             this.character.addExperience(collected.value);
+            break;
+          case 'blood':
+            // For now, we'll add blood to gold since there's no separate blood resource system
+            this.character.gold += collected.value;
             break;
         }
       }
