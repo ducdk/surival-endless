@@ -40,7 +40,7 @@ class Monster {
         this.health = Math.floor(240 * difficulty); // Reduced from 300
         this.maxHealth = this.health;
         this.damage = Math.floor(20 * difficulty); // Reduced from 25
-        this.speed = 2;
+        this.speed = 1;
         this.color = '#ff6600';
         this.imagePath = 'assets/monster/elite.png';
         break;
@@ -48,7 +48,7 @@ class Monster {
         this.health = Math.floor(800 * difficulty); // Reduced from 1000
         this.maxHealth = this.health;
         this.damage = Math.floor(40 * difficulty); // Reduced from 50
-        this.speed = 2;
+        this.speed = 1;
         this.color = '#800080';
         this.width = 60;
         this.height = 60;

@@ -18,14 +18,22 @@ class Game {
     this.score = 0;
     this.gameTime = 0;
     
+    // Log information board statistics
+    this.monstersDestroyed = 0;
+    this.totalDamageCaused = 0;
+    this.damageReceived = 0;
+    this.totalHealthRecovered = 0;
+    this.combatLog = []; // Array to store recent combat events
+    
     // Entities
-    this.character = new Character(this.width / 2, this.height / 2);
+    this.character = new Character(this.width / 2, this.height / 2, this);
     this.monsters = [];
     this.resources = [];
     this.attackEffects = [];
     this.deathEffects = [];
     this.collectionEffects = [];
     this.levelUpEffects = [];
+    this.healingEffects = []; // For Health Regeneration display
     
     // Input handling
     this.keys = {};
@@ -306,6 +314,7 @@ class Game {
     this.updateDeathEffects(deltaTime);
     this.updateCollectionEffects(deltaTime);
     this.updateLevelUpEffects(deltaTime);
+    this.updateHealingEffects(deltaTime);
   }
   
   updateCharacter(deltaTime) {
@@ -355,6 +364,9 @@ class Game {
         this.spawnResources(monster.x, monster.y, monster.type);
         this.score += 10;
         this.character.addExperience(10);
+        
+        // Update log statistics
+        this.monstersDestroyed++;
         
         // Play death sound
         this.soundManager.playSound('monsterDeath');
@@ -463,6 +475,26 @@ class Game {
     }
   }
   
+  updateHealingEffects(deltaTime) {
+    // Limit the number of healing effects for performance
+    const maxEffects = 10;
+    if (this.healingEffects.length > maxEffects) {
+      // Remove excess effects (oldest ones)
+      this.healingEffects.splice(0, this.healingEffects.length - maxEffects);
+    }
+    
+    for (let i = this.healingEffects.length - 1; i >= 0; i--) {
+      const effect = this.healingEffects[i];
+      effect.life -= deltaTime;
+      effect.y -= 0.5; // Move upward
+      effect.alpha = effect.life / effect.maxLife;
+      
+      if (effect.life <= 0) {
+        this.healingEffects.splice(i, 1);
+      }
+    }
+  }
+  
   spawnMonsters(deltaTime) {
     this.spawnTimer += deltaTime;
     
@@ -556,7 +588,9 @@ class Game {
       
       // Monster damages player on contact
       if (this.isColliding(this.character, monster)) {
-        this.character.takeDamage(monster.damage * 0.1); // Small damage per frame
+        const damage = monster.damage * 0.1;
+        this.character.takeDamage(damage); // Small damage per frame
+        this.damageReceived += damage;
         // Play hit sound
         this.soundManager.playSound('playerHit');
       }
@@ -580,7 +614,13 @@ class Game {
           if (distanceToBall < 5 + monster.width/2) {
             // Apply damage from whirlwind skill
             const damage = whirlwindSkill.getEffectValue();
+            const previousHealth = monster.health;
             monster.takeDamage(damage);
+            const actualDamage = previousHealth - monster.health;
+            this.totalDamageCaused += actualDamage;
+            
+            // Add to combat log
+            this.addToCombatLog(monster.type, actualDamage);
             
             // Add hit effect at monster location
             this.addHitEffect(
@@ -622,32 +662,15 @@ class Game {
       
       // Attack each target
       if (targets.length > 0) {
+        // With the updated attack method, we now shoot multiple bullets
+        // We'll attack the closest monster and let the spread hit others
         const attackSuccessful = this.character.attack(
           targets[0].x + targets[0].width/2,
           targets[0].y + targets[0].height/2
         );
+        
         if (attackSuccessful) {
           console.log('Character successfully attacked monsters with Triple Eff');
-          
-          // Attack all targets
-          for (const target of targets) {
-            target.takeDamage(this.character.damage);
-            
-            // Add visual feedback for attack
-            this.addAttackEffect(
-              this.character.x + this.character.width/2,
-              this.character.y + this.character.height/2,
-              target.x + target.width/2,
-              target.y + target.height/2
-            );
-            
-            // Add hit effect at monster location
-            this.addHitEffect(
-              target.x + target.width/2,
-              target.y + target.height/2,
-              '#ff0000'
-            );
-          }
           
           // Activate Triple Eff cooldown
           if (tripleEffSkill) {
@@ -666,21 +689,6 @@ class Game {
       );
       if (attackSuccessful) {
         console.log('Character successfully attacked monster');
-        // Add visual feedback for attack
-        this.addAttackEffect(
-          this.character.x + this.character.width/2,
-          this.character.y + this.character.height/2,
-          closestMonster.x + closestMonster.width/2,
-          closestMonster.y + closestMonster.height/2
-        );
-        
-        // Add hit effect at monster location
-        this.addHitEffect(
-          closestMonster.x + closestMonster.width/2,
-          closestMonster.y + closestMonster.height/2,
-          '#ff0000'
-        );
-        
         // Play attack sound
         this.soundManager.playSound('attack');
       }
@@ -695,9 +703,15 @@ class Game {
         const monster = this.monsters[j];
         if (this.isCollidingWithBullet(monster, bullet)) {
           // Character bullet hits monster
+          const previousHealth = monster.health;
           monster.takeDamage(bullet.damage);
+          const actualDamage = previousHealth - monster.health;
+          this.totalDamageCaused += actualDamage;
           this.character.bullets.splice(i, 1);
           hit = true;
+          
+          // Add to combat log
+          this.addToCombatLog(monster.type, actualDamage);
           
           // Add hit effect at monster location
           this.addHitEffect(
@@ -741,6 +755,7 @@ class Game {
             // Monster bullet hits character
             if (takesDamage) {
               this.character.takeDamage(bullet.damage);
+              this.damageReceived += bullet.damage;
             }
             
             monster.bullets.splice(j, 1);
@@ -768,6 +783,7 @@ class Game {
         switch (collected.type) {
           case 'health':
             this.character.heal(collected.value);
+            this.totalHealthRecovered += collected.value;
             break;
           case 'gold':
             this.character.gold += collected.value;
@@ -837,6 +853,9 @@ class Game {
     // Render level-up effects
     this.renderLevelUpEffects();
     
+    // Render healing effects
+    this.renderHealingEffects();
+    
     // Render UI
     this.renderUI();
   }
@@ -899,6 +918,11 @@ class Game {
     // Render skill boxes at the bottom of the health bar
     this.renderSkillBoxes(healthBarX, healthBarY + healthBarHeight + 10);
     
+    // Render log information board
+    if (this.state === 'playing') {
+      this.renderLogInfoBoard();
+    }
+    
     // Game time (repositioned to the middle of the top of the screen)
     const timeSeconds = Math.floor(this.gameTime / 1000);
     this.ctx.fillStyle = 'white';
@@ -909,11 +933,11 @@ class Game {
     this.ctx.font = '14px Arial';
     
     // Save/Load instructions
-    this.ctx.fillText('F5: Save Game', this.width - 120, 20);
-    this.ctx.fillText('F9: Load Game', this.width - 120, 40);
+    // this.ctx.fillText('F5: Save Game', this.width - 120, 20);
+    // this.ctx.fillText('F9: Load Game', this.width - 120, 40);
     
     // Shop instructions
-    this.ctx.fillText('P: Open Shop', this.width - 120, 60);
+    // this.ctx.fillText('P: Open Shop', this.width - 120, 60);
     
     // Shop screen
     if (this.state === 'shop') {
@@ -1023,6 +1047,16 @@ class Game {
       // Add star shape for level up effect
       this.ctx.fillStyle = `rgba(255, 255, 255, ${effect.alpha * 0.8})`;
       this.drawStar(effect.x, effect.y, 5, effect.size * 0.8, effect.size * 0.4);
+    }
+  }
+  
+  renderHealingEffects() {
+    for (const effect of this.healingEffects) {
+      this.ctx.fillStyle = `rgba(46, 204, 113, ${effect.alpha})`; // Green color with alpha
+      this.ctx.font = '16px Arial';
+      this.ctx.textAlign = 'center';
+      this.ctx.fillText(`+${Math.floor(effect.amount)}`, effect.x, effect.y);
+      this.ctx.textAlign = 'left';
     }
   }
   
@@ -1244,6 +1278,12 @@ class Game {
     this.state = 'playing';
     this.score = 0;
     this.gameTime = 0;
+    // Reset log information board statistics
+    this.monstersDestroyed = 0;
+    this.totalDamageCaused = 0;
+    this.damageReceived = 0;
+    this.totalHealthRecovered = 0;
+    this.combatLog = []; // Reset combat log
     // Keep the existing character with their equipment
     this.character.x = this.width / 2;
     this.character.y = this.height / 2;
@@ -1268,7 +1308,7 @@ class Game {
     // Return to welcome screen
     this.state = 'welcome';
     // Create a new character to reset equipment
-    this.character = new Character(this.width / 2, this.height / 2);
+    this.character = new Character(this.width / 2, this.height / 2, this);
     // Load user data
     this.loadUserData();
     // Update welcome screen info
@@ -1438,6 +1478,23 @@ class Game {
     });
   }
   
+  addToCombatLog(monsterType, damage) {
+    // Add combat event to log
+    const event = {
+      monsterType: monsterType,
+      damage: damage,
+      timestamp: Date.now()
+    };
+    
+    // Add to beginning of array (newest first)
+    this.combatLog.unshift(event);
+    
+    // Keep only the last 5 events
+    if (this.combatLog.length > 5) {
+      this.combatLog.pop();
+    }
+  }
+  
   addCollectionEffect(x, y, color) {
     // Create a simple collection effect
     this.collectionEffects.push({
@@ -1448,6 +1505,18 @@ class Game {
       maxLife: 500, // milliseconds
       life: 500,
       expansionRate: 0.1,
+      alpha: 1
+    });
+  }
+  
+  addHealingEffect(x, y, amount) {
+    // Create a healing display effect
+    this.healingEffects.push({
+      x: x,
+      y: y,
+      amount: amount,
+      maxLife: 1000, // milliseconds (1 second)
+      life: 1000,
       alpha: 1
     });
   }
@@ -1508,6 +1577,65 @@ class Game {
     });
   }
   
+// Render log information board
+  renderLogInfoBoard() {
+    // Position the board in the upper right corner
+    const boardX = this.width - 280;
+    const boardY = 10;
+    const boardWidth = 270;
+    const boardHeight = 220;
+    
+    // Draw board background
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.ctx.fillRect(boardX, boardY, boardWidth, boardHeight);
+    
+    // Draw board border
+    this.ctx.strokeStyle = '#555';
+    this.ctx.lineWidth = 2;
+    this.ctx.strokeRect(boardX, boardY, boardWidth, boardHeight);
+    
+    // Draw title
+    this.ctx.fillStyle = 'white';
+    this.ctx.font = '16px Arial';
+    this.ctx.textAlign = 'left';
+    this.ctx.fillText('Combat Log', boardX + 10, boardY + 20);
+    
+    // Draw statistics
+    this.ctx.font = '14px Arial';
+    this.ctx.fillText(`Monsters Destroyed: ${this.monstersDestroyed}`, boardX + 10, boardY + 40);
+    this.ctx.fillText(`Total Damage: ${Math.floor(this.totalDamageCaused)}`, boardX + 10, boardY + 60);
+    this.ctx.fillText(`Damage Received: ${Math.floor(this.damageReceived)}`, boardX + 10, boardY + 80);
+    this.ctx.fillText(`Health Recovered: ${Math.floor(this.totalHealthRecovered)}`, boardX + 10, boardY + 100);
+    
+    // Draw recent combat events
+    this.ctx.font = '12px Arial';
+    this.ctx.fillText('Recent Kills:', boardX + 10, boardY + 120);
+    
+    // Draw up to 5 recent combat events
+    for (let i = 0; i < Math.min(5, this.combatLog.length); i++) {
+      const event = this.combatLog[i];
+      const yPosition = boardY + 140 + (i * 15);
+      
+      // Format the event text
+      let eventText = `${event.monsterType}: ${Math.floor(event.damage)} dmg`;
+      
+      // Truncate text if it's too long to fit in the panel
+      const maxWidth = boardWidth - 30;
+      let textWidth = this.ctx.measureText(eventText).width;
+      
+      // If text is too wide, truncate it
+      if (textWidth > maxWidth) {
+        let truncatedText = eventText;
+        while (textWidth > maxWidth && truncatedText.length > 0) {
+          truncatedText = truncatedText.substring(0, truncatedText.length - 1);
+          textWidth = this.ctx.measureText(truncatedText + '...').width;
+        }
+        eventText = truncatedText + '...';
+      }
+      
+      this.ctx.fillText(eventText, boardX + 20, yPosition);
+    }
+  }
   // Render skill boxes with cooldown times
   renderSkillBoxes(x, y) {
     const skillBoxSize = 50;

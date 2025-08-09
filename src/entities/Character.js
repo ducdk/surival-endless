@@ -3,7 +3,7 @@ import Bullet from './Bullet.js';
 
 // Character entity for the Endless Survival game
 class Character {
-  constructor(x, y) {
+  constructor(x, y, game) {
     this.x = x;
     this.y = y;
     this.width = 40;
@@ -23,10 +23,14 @@ class Character {
     this.inventory = []; // Equipment inventory
     this.skills = []; // Skills array
     this.bullets = []; // Bullets array
+    this.game = game; // Reference to the Game instance
     
     // Skill-related properties
     this.secondWindTimer = 0; // Timer for Second Wind passive healing
     this.secondWindInterval = 5000; // Heal every 5 seconds (5000ms)
+    
+    // Health Regeneration properties
+    this.healthRegenTimer = 0; // Timer for Health Regeneration passive healing
     
     // Whirlwind skill properties
     this.whirlwindBalls = []; // Array to store ball positions
@@ -77,6 +81,23 @@ class Character {
         const healAmount = secondWindSkill.getEffectValue() / 10; // Heal 10% of the skill's value per interval
         this.heal(healAmount);
         this.secondWindTimer = 0; // Reset timer
+      }
+    }
+    
+    // Update Health Regeneration passive healing
+    const healthRegenSkill = this.getSkill('Health Regeneration');
+    if (healthRegenSkill && healthRegenSkill.currentLevel > 0) {
+      this.healthRegenTimer += deltaTime;
+      
+      // Calculate healing interval based on skill level (8/7/6/5/4s)
+      const healingIntervals = [0, 8000, 7000, 6000, 5000, 4000]; // Index 0 unused, levels 1-5
+      const healingInterval = healingIntervals[healthRegenSkill.currentLevel];
+      
+      if (this.healthRegenTimer >= healingInterval) {
+        // Heal a small amount
+        const healAmount = healthRegenSkill.getEffectValue();
+        this.heal(healAmount);
+        this.healthRegenTimer = 0; // Reset timer
       }
     }
     
@@ -148,8 +169,28 @@ class Character {
   }
 
   heal(amount) {
+    // Store previous health to calculate actual healing
+    const previousHealth = this.health;
     this.health += amount;
     if (this.health > this.maxHealth) this.health = this.maxHealth;
+    
+    // Calculate actual healing amount
+    const actualHealAmount = this.health - previousHealth;
+    
+    // Notify game of healing for visual effect and statistics if there was actual healing
+    if (actualHealAmount > 0 && this.game) {
+      // Update total health recovered statistic
+      if (this.game.totalHealthRecovered !== undefined) {
+        this.game.totalHealthRecovered += actualHealAmount;
+      }
+      
+      // Add visual effect for healing
+      this.game.addHealingEffect(
+        this.x + this.width / 2,
+        this.y - 20, // Position above the character
+        actualHealAmount
+      );
+    }
   }
 
   addExperience(exp) {
@@ -202,21 +243,45 @@ class Character {
         powerAttackSkill.activate();
       }
       
-      // Create a bullet
-      const bullet = new Bullet(
-        this.x + this.width / 2,
-        this.y + this.height / 2,
-        targetX,
-        targetY,
-        10, // speed
-        damage,
-        '#ffffff',
-        true // isPlayerBullet
-      );
+      // Create multiple bullets with spread
+      const bulletCount = 3; // Number of bullets to shoot
+      const spreadAngle = 0.4; // Spread angle in radians
       
-      this.bullets.push(bullet);
+      // Calculate the angle to the target
+      const centerX = this.x + this.width / 2;
+      const centerY = this.y + this.height / 2;
+      const dx = targetX - centerX;
+      const dy = targetY - centerY;
+      const targetAngle = Math.atan2(dy, dx);
+      
+      // Create bullets with spread
+      for (let i = 0; i < bulletCount; i++) {
+        // Calculate spread angle for this bullet
+        const angleOffset = (i - (bulletCount - 1) / 2) * spreadAngle;
+        const bulletAngle = targetAngle + angleOffset;
+        
+        // Calculate target position with spread
+        const spreadDistance = 500; // Distance to calculate spread target
+        const spreadTargetX = centerX + Math.cos(bulletAngle) * spreadDistance;
+        const spreadTargetY = centerY + Math.sin(bulletAngle) * spreadDistance;
+        
+        // Create a bullet
+        const bullet = new Bullet(
+          centerX,
+          centerY,
+          spreadTargetX,
+          spreadTargetY,
+          10, // speed
+          damage,
+          '#ffffff',
+          true // isPlayerBullet
+        );
+        
+        this.bullets.push(bullet);
+      }
+      
       this.attackCooldown = this.attackCooldownTime;
-      console.log(`Character shoots bullet for ${damage} damage`);
+      console.log(`Character shoots ${bulletCount} bullets for ${damage} damage each`);
       return true;
     }
     return false;
@@ -230,8 +295,8 @@ class Character {
       
       // Remove bullets that have expired or gone off-screen
       if (!bullet.isAlive() ||
-          bullet.x < -100 || bullet.x > 2000 ||
-          bullet.y < -100 || bullet.y > 2000) {
+          bullet.x < -100 || bullet.x > this.game.width + 100 ||
+          bullet.y < -100 || bullet.y > this.game.height + 100) {
         this.bullets.splice(i, 1);
       }
     }
@@ -318,7 +383,7 @@ class Character {
     // Survival Skills
     this.skills.push(new Skill('Health Regeneration', 'passive', {
       type: 'heal',
-      baseValue: 1,
+      baseValue: 20,
       perLevel: 1,
       description: 'Regenerate health over time',
       cooldown: 1000 // 1 second
