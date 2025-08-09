@@ -244,7 +244,12 @@ class Character {
       }
       
       // Create multiple bullets with spread
-      const bulletCount = 3; // Number of bullets to shoot
+      // Get bullet count from Bullet Storm skill
+      let bulletCount = 3; // Default bullet count
+      const bulletStormSkill = this.getSkill('Bullet Storm');
+      if (bulletStormSkill && bulletStormSkill.currentLevel > 0) {
+        bulletCount = bulletStormSkill.getEffectValue();
+      }
       const spreadAngle = 0.4; // Spread angle in radians
       
       // Calculate the angle to the target
@@ -389,20 +394,12 @@ class Character {
       cooldown: 1000 // 1 second
     }, 5, 4, 100));
     
-    this.skills.push(new Skill('Damage Reduction', 'passive', {
-      type: 'chance',
-      baseValue: 2,
-      perLevel: 2,
-      description: 'Reduce incoming damage',
-      cooldown: 1000 // 1 second
-    }, 5, 6, 150));
-    
     this.skills.push(new Skill('Second Wind', 'passive', {
       type: 'heal',
       baseValue: 30,
       perLevel: 5,
       description: 'Automatically heal a small amount every few seconds',
-      cooldown: 30000 // 30 seconds
+      cooldown: 10000 // 10 seconds
     }, 3, 8, 200));
     
     
@@ -446,6 +443,15 @@ class Character {
       description: 'Shoot 3 lines at 3 targets instead of 1 basic line',
       cooldown: 1000 // 1 second
     }, 1, 10, 200));
+    
+    // Bullet Storm skill
+    this.skills.push(new Skill('Bullet Storm', 'passive', {
+      type: 'bullet',
+      baseValue: 3,
+      perLevel: 1,
+      description: 'Increase the number of bullets fired per attack',
+      cooldown: 1000 // 1 second
+    }, 5, 6, 150));
   }
   
   // Get available skills for current level

@@ -65,6 +65,8 @@ class Skill {
         return this.effect.baseValue + (this.effect.perLevel * (this.currentLevel - 1));
       case 'chance':
         return this.effect.baseValue + (this.effect.perLevel * (this.currentLevel - 1));
+      case 'bullet':
+        return this.effect.baseValue + (this.effect.perLevel * (this.currentLevel - 1));
       default:
         return this.effect.baseValue;
     }

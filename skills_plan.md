@@ -34,21 +34,21 @@ This document outlines the implementation of a character skills system for the E
 - **Unlock**: Level 7
 - **Upgrade Cost**: 120 gold per level
 
+#### 4. Bullet Storm
+- **Type**: Passive
+- **Effect**: Increase the number of bullets fired per attack
+- **Levels**: 5 levels (3 to 7 bullets per attack)
+- **Unlock**: Level 6
+- **Upgrade Cost**: 150 gold per level
+
 ### Survival Skills
 
-#### 4. Health Regeneration
+#### 5. Health Regeneration
 - **Type**: Passive
 - **Effect**: Regenerate health over time
 - **Levels**: 5 levels (1% to 5% max health per second)
 - **Unlock**: Level 4
 - **Upgrade Cost**: 100 gold per level
-
-#### 5. Damage Reduction
-- **Type**: Passive
-- **Effect**: Reduce incoming damage
-- **Levels**: 5 levels (2% to 10% damage reduction)
-- **Unlock**: Level 6
-- **Upgrade Cost**: 150 gold per level
 
 #### 6. Second Wind
 - **Type**: Active (Cooldown: 60 seconds)
