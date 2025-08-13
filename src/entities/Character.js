@@ -1,5 +1,6 @@
 import Skill from './Skill.js';
 import Bullet from './Bullet.js';
+import ImageCache from './ImageCache.js';
 
 // Character entity for the Endless Survival game
 class Character {
@@ -38,9 +39,8 @@ class Character {
     this.whirlwindRadius = 90; // Initial radius of the whirlwind (matches level 1 with new formula)
     this.whirlwindBallCount = 10; // Number of balls
     
-    // Load character image
-    this.image = new Image();
-    this.image.src = 'assets/character.png';
+    // Load character image from global cache
+    this.image = ImageCache.getImage('assets/character.png');
     
     // Initialize skills
     this.initializeSkills();
@@ -329,13 +329,11 @@ class Character {
       case 'shield':
         // Defense could be used to reduce damage taken
         break;
-      case 'boots':
-        this.speed += equipment.speed;
-        break;
       case 'amulet':
         this.maxHealth += equipment.health;
         this.health += equipment.health;
         break;
+      // Note: Speed is not accumulated from equipment as per game design
     }
   }
   
@@ -347,12 +345,10 @@ class Character {
         case 'damage':
           if (item.type === 'sword') bonus += item.damage;
           break;
-        case 'speed':
-          if (item.type === 'boots') bonus += item.speed;
-          break;
         case 'health':
           if (item.type === 'amulet') bonus += item.health;
           break;
+        // Note: Speed is not accumulated from equipment as per game design
       }
     }
     return bonus;

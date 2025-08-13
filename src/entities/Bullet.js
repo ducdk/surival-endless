@@ -1,4 +1,6 @@
 // Bullet entity for the Endless Survival game
+import ImageCache from './ImageCache.js';
+
 class Bullet {
   constructor(startX, startY, targetX, targetY, speed = 10, damage = 10, color = '#ffffff', isPlayerBullet = true) {
     this.x = startX;
@@ -25,9 +27,8 @@ class Bullet {
     this.life = 1000; // milliseconds before bullet disappears
     this.maxLife = 1000;
     
-    // Load bullet image
-    this.image = new Image();
-    this.image.src = 'assets/effects/attack/bulltet.png';
+    // Load bullet image from global cache
+    this.image = ImageCache.getImage('assets/effects/attack/bulltet.png');
   }
   
   update(deltaTime) {

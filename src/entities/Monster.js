@@ -1,4 +1,5 @@
 import Bullet from './Bullet.js';
+import ImageCache from './ImageCache.js';
 
 // Monster entity for the Endless Survival game
 class Monster {
@@ -63,9 +64,8 @@ class Monster {
         this.imagePath = 'assets/monster/normal.png'; // We'll need to create this or use a default
     }
     
-    // Load monster image
-    this.image = new Image();
-    this.image.src = this.imagePath;
+    // Load monster image from global cache
+    this.image = ImageCache.getImage(this.imagePath);
     
     // Ranged attack properties (only for ranged monsters)
     if (this.type === 'ranged') {

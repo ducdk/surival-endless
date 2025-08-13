@@ -1,7 +1,5 @@
 // Resource entity for the Endless Survival game
-
-// Image cache to prevent continuous requests for the same images
-const imageCache = new Map();
+import ImageCache from './ImageCache.js';
 
 class Resource {
   constructor(x, y, type) {
@@ -69,35 +67,12 @@ class Resource {
     if (this.collected) return;
     
     // Check if we have a cached image for this resource type
-    if (imageCache.has(this.type)) {
-      const cachedImage = imageCache.get(this.type);
-      // If image was successfully loaded, draw it
-      if (cachedImage && cachedImage.complete && cachedImage.naturalWidth !== 0) {
-        ctx.drawImage(cachedImage, this.x, this.y, this.width, this.height);
-        return;
-      }
-      // If image failed to load, remove it from cache
-      imageCache.delete(this.type);
-    }
+    // Try to get image from global cache
+    const image = ImageCache.getImage(`assets/resource/${this.type}.png`);
     
-    // Try to load and draw image
-    const image = new Image();
-    image.src = `assets/resource/${this.type}.png`;
-    
-    // When image loads successfully, cache it and draw it
-    image.onload = () => {
-      imageCache.set(this.type, image);
-    };
-    
-    // When image fails to load, cache the failure
-    image.onerror = () => {
-      imageCache.set(this.type, null);
-    };
-    
-    // If image is already loaded (from cache), draw it immediately
+    // If image is loaded, draw it
     if (image.complete && image.naturalWidth !== 0) {
       ctx.drawImage(image, this.x, this.y, this.width, this.height);
-      imageCache.set(this.type, image);
     } else {
       // Fallback to drawing shapes if images don't load
       ctx.fillStyle = this.color;
