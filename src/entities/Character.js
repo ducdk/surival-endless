@@ -216,7 +216,7 @@ class Character {
     
     this.health = this.maxHealth;
     this.damage += 5;
-    this.speed += 0.125; // Increase speed by 2 when leveling up
+    this.speed += 0.0125; // Increase speed by 2 when leveling up
   }
 
   move(dx, dy) {

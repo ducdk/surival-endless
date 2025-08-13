@@ -14,7 +14,7 @@ class Game {
     this.height = canvas.height;
     
     // Game state
-    this.state = 'welcome'; // 'welcome', 'playing', 'gameOver', 'shop'
+    this.state = 'welcome'; // 'welcome', 'playing', 'gameOver', 'shop', 'reward', 'profile'
     this.score = 0;
     this.gameTime = 0;
     
@@ -24,6 +24,11 @@ class Game {
     this.damageReceived = 0;
     this.totalHealthRecovered = 0;
     this.combatLog = []; // Array to store recent combat events
+    
+    // Reward screen properties
+    this.chests = []; // Array to store chest data
+    this.selectedChest = null; // Track which chest was selected
+    this.chestRewards = null; // Store rewards from selected chest
     
     // Entities
     this.character = new Character(this.width / 2, this.height / 2, this);
@@ -42,6 +47,14 @@ class Game {
     this.spawnTimer = 0;
     this.spawnInterval = 1000; // milliseconds
     
+    // Reward screen properties
+    this.chests = []; // Array to store chest data
+    this.selectedChest = null; // Track which chest was selected
+    this.chestRewards = null; // Store rewards from selected chest
+    
+    // Image cache to prevent continuous requests for missing images
+    this.imageCache = new Map();
+    
     // Initialize game
     this.setupEventListeners();
     this.levelUpChoice = null; // 'health', 'damage', or 'speed'
@@ -57,6 +70,11 @@ class Game {
       this.resizeCanvas();
     });
   }
+
+  // Clear the image cache
+  clearImageCache() {
+    this.imageCache.clear();
+  }
   
   setupEventListeners() {
     // Keyboard input
@@ -68,6 +86,10 @@ class Game {
         // Handle shop key
         if (e.key === 'p' || e.key === 'P') {
           this.state = 'shop';
+        }
+        // Handle profile key
+        if (e.key === 'o' || e.key === 'O') {
+          this.state = 'profile';
         }
         return;
       }
@@ -140,8 +162,16 @@ class Game {
           case 'Q':
             this.activateCharacterSkill('Whirlwind');
             break;
+          case 'e':
+          case 'E':
+            this.activateCharacterSkill('Power Attack');
+            break;
+          case 'r':
+          case 'R':
+            this.activateCharacterSkill('Second Wind');
+            break;
+          }
         }
-      }
     });
     
     window.addEventListener('keyup', (e) => {
@@ -162,13 +192,111 @@ class Game {
         this.state = 'shop';
       });
     }
+    
+    const profileButton = document.getElementById('profileButton');
+    if (profileButton) {
+      profileButton.addEventListener('click', () => {
+        this.state = 'profile';
+      });
+    }
       
-      // Mouse input for shop
+      // Mouse input for shop, game over screen, reward screen, and profile screen
       this.canvas.addEventListener('click', (e) => {
         if (this.state === 'shop') {
           this.handleShopClick(e);
+        } else if (this.state === 'gameOver') {
+          this.handleGameOverClick(e);
+        } else if (this.state === 'reward') {
+          this.handleRewardClick(e);
+        } else if (this.state === 'profile') {
+          this.handleProfileClick(e);
         }
       });
+    }
+    
+    // Handle profile screen clicks
+    handleProfileClick(e) {
+      const { x, y } = this.getCanvasCoordinates(e);
+      
+      // Back button dimensions (same as in renderProfileScreen)
+      const buttonWidth = 150;
+      const buttonHeight = 40;
+      const buttonX = this.width / 2 - buttonWidth / 2;
+      const buttonY = this.height - 100;
+      
+      // Check if back button was clicked
+      if (x >= buttonX && x <= buttonX + buttonWidth &&
+          y >= buttonY && y <= buttonY + buttonHeight) {
+        this.state = 'welcome';
+        return;
+      }
+    }
+
+    // Handle reward screen clicks
+    handleRewardClick(e) {
+      const { x, y } = this.getCanvasCoordinates(e);
+      
+      // If a chest has already been selected, handle button clicks
+      if (this.selectedChest !== null) {
+        // Calculate button position to match renderRewardScreen
+        const centerY = this.height / 2 - 50;
+        const buttonWidth = 150;
+        const buttonHeight = 40;
+        const buttonY = centerY + 120;
+        const restartButtonX = this.width / 2 - buttonWidth - 10;
+        const startNewButtonX = this.width / 2 + 10;
+        
+        // Check if Restart button was clicked
+        if (x >= restartButtonX && x <= restartButtonX + buttonWidth &&
+            y >= buttonY && y <= buttonY + buttonHeight) {
+          this.restart();
+          return;
+        }
+        
+        // Check if Start New button was clicked
+        if (x >= startNewButtonX && x <= startNewButtonX + buttonWidth &&
+            y >= buttonY && y <= buttonY + buttonHeight) {
+          this.state = 'welcome';
+          this.updateWelcomeScreenInfo();
+          return;
+        }
+      } else {
+        // Handle chest selection
+        for (const chest of this.chests) {
+          if (x >= chest.x && x <= chest.x + chest.width &&
+              y >= chest.y && y <= chest.y + chest.height) {
+            this.selectChest(chest.id);
+            return;
+          }
+        }
+      }
+    }
+    
+    // Handle game over screen clicks
+    handleGameOverClick(e) {
+      const { x, y } = this.getCanvasCoordinates(e);
+      
+      // Button dimensions (same as in renderGameOverScreen)
+      const buttonWidth = 200;
+      const buttonHeight = 40;
+      const buttonY = this.height / 2;
+      const startButtonX = this.width / 2 - buttonWidth - 10;
+      const returnButtonX = this.width / 2 + 10;
+      
+      // Check if Start New Game button was clicked
+      if (x >= startButtonX && x <= startButtonX + buttonWidth &&
+          y >= buttonY && y <= buttonY + buttonHeight) {
+        this.restart();
+        return;
+      }
+      
+      // Check if Return to Welcome button was clicked
+      if (x >= returnButtonX && x <= returnButtonX + buttonWidth &&
+          y >= buttonY && y <= buttonY + buttonHeight) {
+        this.state = 'welcome';
+        this.updateWelcomeScreenInfo();
+        return;
+      }
     }
     
     // Convert mouse event coordinates to canvas coordinates
@@ -300,12 +428,9 @@ class Game {
         // Save user data
         this.saveUserData();
         
-        // Automatically return to welcome screen after 5 seconds
-        setTimeout(() => {
-          if (this.state === 'gameOver') {
-            this.state = 'welcome';
-          }
-        }, 5000);
+        // Generate reward screen with chests
+        this.generateChests();
+        this.state = 'reward';
       }
     }
     
@@ -885,6 +1010,12 @@ class Game {
       document.getElementById('welcomeScreen').style.display = 'none';
     }
     
+    // Profile screen
+    if (this.state === 'profile') {
+      this.renderProfileScreen();
+      return;
+    }
+    
     // Score
     this.ctx.fillStyle = 'white';
     this.ctx.font = '16px Arial';
@@ -962,11 +1093,37 @@ class Game {
       this.ctx.fillStyle = 'white';
       this.ctx.font = '40px Arial';
       this.ctx.textAlign = 'center';
-      this.ctx.fillText('Game Over', this.width / 2, this.height / 2 - 40);
+      this.ctx.fillText('Game Over', this.width / 2, this.height / 2 - 80);
       this.ctx.font = '20px Arial';
-      this.ctx.fillText(`Final Score: ${this.score}`, this.width / 2, this.height / 2);
-      this.ctx.fillText('Press R to restart or P to shop', this.width / 2, this.height / 2 + 40);
-      this.ctx.fillText('Returning to welcome screen in 5 seconds...', this.width / 2, this.height / 2 + 80);
+      this.ctx.fillText(`Final Score: ${this.score}`, this.width / 2, this.height / 2 - 40);
+      
+      // Draw buttons
+      const buttonWidth = 200;
+      const buttonHeight = 40;
+      const buttonY = this.height / 2;
+      const startButtonX = this.width / 2 - buttonWidth - 10;
+      const returnButtonX = this.width / 2 + 10;
+      
+      // Start New Game button
+      this.ctx.fillStyle = '#f1c40f';
+      this.ctx.fillRect(startButtonX, buttonY, buttonWidth, buttonHeight);
+      this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeRect(startButtonX, buttonY, buttonWidth, buttonHeight);
+      this.ctx.fillStyle = '#2c3e50';
+      this.ctx.font = '16px Arial';
+      this.ctx.fillText('Start New Game', this.width / 2 - buttonWidth/2 - 10, buttonY + buttonHeight/2 + 5);
+      
+      // Return to Welcome button
+      this.ctx.fillStyle = '#f1c40f';
+      this.ctx.fillRect(returnButtonX, buttonY, buttonWidth, buttonHeight);
+      this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeRect(returnButtonX, buttonY, buttonWidth, buttonHeight);
+      this.ctx.fillStyle = '#2c3e50';
+      this.ctx.font = '16px Arial';
+      this.ctx.fillText('Return to Welcome', this.width / 2 + buttonWidth/2 + 10, buttonY + buttonHeight/2 + 5);
+      
       this.ctx.textAlign = 'left';
       
       // Update welcome screen info for when player returns
@@ -991,6 +1148,346 @@ class Game {
         this.character.levelUpNotification = false;
       }
     }
+    
+    // Reward screen
+    if (this.state === 'reward') {
+      this.renderRewardScreen();
+    }
+  }
+  
+  renderProfileScreen() {
+    // Dark overlay
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    this.ctx.fillRect(0, 0, this.width, this.height);
+    
+    // Title
+    this.ctx.fillStyle = 'white';
+    this.ctx.font = '40px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('Character Profile', this.width / 2, 60);
+    
+    // Player name and level
+    this.ctx.font = '24px Arial';
+    this.ctx.fillText(`Level ${this.character.level} Warrior`, this.width / 2, 100);
+    
+    // Define column positions
+    const leftColumnX = 100;
+    const rightColumnX = this.width / 2 + 50;
+    const sectionSpacing = 30;
+    
+    // Character information (left column)
+    const characterY = 150;
+    
+    // Draw character image
+    const cacheKey = 'character';
+    
+    // Check if we have a cached result for this image
+    if (this.imageCache.has(cacheKey)) {
+      const cachedImage = this.imageCache.get(cacheKey);
+      // If image was successfully loaded, draw it
+      if (cachedImage && cachedImage.complete && cachedImage.naturalWidth !== 0) {
+        this.ctx.drawImage(cachedImage, leftColumnX, characterY, 64, 64);
+      } else {
+        // Draw a default box if image failed to load
+        this.ctx.fillStyle = '#333';
+        this.ctx.fillRect(leftColumnX, characterY, 64, 64);
+        this.ctx.strokeStyle = '#555';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(leftColumnX, characterY, 64, 64);
+      }
+    } else {
+      // Try to load and draw character image
+      const characterImage = new Image();
+      characterImage.src = 'assets/character.png';
+      
+      // When image loads successfully, cache it and draw it
+      characterImage.onload = () => {
+        this.imageCache.set(cacheKey, characterImage);
+        // Redraw the profile screen to show the loaded image
+        if (this.state === 'profile') {
+          this.renderProfileScreen();
+        }
+      };
+      
+      // When image fails to load, cache the failure
+      characterImage.onerror = () => {
+        this.imageCache.set(cacheKey, null);
+        // Draw a default box if image failed to load
+        this.ctx.fillStyle = '#333';
+        this.ctx.fillRect(leftColumnX, characterY, 64, 64);
+        this.ctx.strokeStyle = '#555';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(leftColumnX, characterY, 64, 64);
+      };
+      
+      // If image is already loaded (from cache), draw it immediately
+      if (characterImage.complete && characterImage.naturalWidth !== 0) {
+        this.ctx.drawImage(characterImage, leftColumnX, characterY, 64, 64);
+        this.imageCache.set(cacheKey, characterImage);
+      } else {
+        // Draw a default box while loading
+        this.ctx.fillStyle = '#333';
+        this.ctx.fillRect(leftColumnX, characterY, 64, 64);
+        this.ctx.strokeStyle = '#555';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(leftColumnX, characterY, 64, 64);
+      }
+    }
+    
+    // Character stats next to the image
+    this.ctx.font = '20px Arial';
+    this.ctx.textAlign = 'left';
+    this.ctx.fillText(`Health: ${Math.floor(this.character.health)}/${this.character.maxHealth}`, leftColumnX + 80, characterY + 20);
+    this.ctx.fillText(`Damage: ${this.character.damage}`, leftColumnX + 80, characterY + 50);
+    this.ctx.fillText(`Speed: ${this.character.speed.toFixed(2)}`, leftColumnX + 80, characterY + 80);
+    
+    // Gold and Experience
+    this.ctx.fillText(`Gold: ${this.character.gold}`, leftColumnX, characterY + 120);
+    this.ctx.fillText(`Experience: ${this.character.experience}/${this.character.experienceToNextLevel}`, leftColumnX, characterY + 150);
+    
+    // Equipment section (right column)
+    const equipmentY = 150;
+    this.ctx.font = '24px Arial';
+    this.ctx.fillText('Equipment:', rightColumnX, equipmentY);
+    
+    // List equipment with images
+    this.ctx.font = '16px Arial';
+    if (this.character.inventory.length === 0) {
+      this.ctx.fillText('No equipment purchased yet', rightColumnX, equipmentY + 30);
+    } else {
+      let equipmentYOffset = equipmentY + 30;
+      for (const item of this.character.inventory) {
+        // Draw a default box for equipment
+        this.ctx.fillStyle = '#333';
+        this.ctx.fillRect(rightColumnX, equipmentYOffset - 16, 32, 32);
+        this.ctx.strokeStyle = '#555';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(rightColumnX, equipmentYOffset - 16, 32, 32);
+        
+        // Create a cache key for this equipment image
+        const cacheKey = `equipment_${item.type}`;
+        
+        // Check if we have a cached result for this image
+        if (this.imageCache.has(cacheKey)) {
+          const cachedImage = this.imageCache.get(cacheKey);
+          // If image was successfully loaded, draw it
+          if (cachedImage && cachedImage.complete && cachedImage.naturalWidth !== 0) {
+            this.ctx.drawImage(cachedImage, rightColumnX, equipmentYOffset - 16, 32, 32);
+          }
+          // If image failed to load, the default box remains visible
+        } else {
+          // Try to load and draw equipment image
+          const equipmentImage = new Image();
+          equipmentImage.src = `assets/equipment/${item.type}.png`;
+          
+          // When image loads successfully, cache it and draw it
+          equipmentImage.onload = () => {
+            this.imageCache.set(cacheKey, equipmentImage);
+            // Redraw the profile screen to show the loaded image
+            if (this.state === 'profile') {
+              this.renderProfileScreen();
+            }
+          };
+          
+          // When image fails to load, cache the failure
+          equipmentImage.onerror = () => {
+            this.imageCache.set(cacheKey, null);
+          };
+          
+          // If image is already loaded (from cache), draw it immediately
+          if (equipmentImage.complete && equipmentImage.naturalWidth !== 0) {
+            this.ctx.drawImage(equipmentImage, rightColumnX, equipmentYOffset - 16, 32, 32);
+            this.imageCache.set(cacheKey, equipmentImage);
+          }
+        }
+        
+        // Draw equipment info next to the image
+        this.ctx.fillText(`${item.icon} ${item.name} (Level ${item.level})`, rightColumnX + 40, equipmentYOffset);
+        this.ctx.fillText(item.getDescription(), rightColumnX + 40, equipmentYOffset + 15);
+        equipmentYOffset += 35;
+      }
+    }
+    
+    // Skills section (right column, below equipment)
+    const skillsY = equipmentY + 200;
+    this.ctx.font = '24px Arial';
+    this.ctx.fillText('Skills:', rightColumnX, skillsY);
+    
+    // List skills with images
+    this.ctx.font = '16px Arial';
+    const unlockedSkills = this.character.getUnlockedSkills();
+    if (unlockedSkills.length === 0) {
+      this.ctx.fillText('No skills unlocked yet', rightColumnX, skillsY + 30);
+    } else {
+      let skillsYOffset = skillsY + 30;
+      for (const skill of unlockedSkills) {
+        // Draw a default box for skill
+        this.ctx.fillStyle = '#333';
+        this.ctx.fillRect(rightColumnX, skillsYOffset - 16, 32, 32);
+        this.ctx.strokeStyle = '#555';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(rightColumnX, skillsYOffset - 16, 32, 32);
+        
+        // Create a cache key for this skill image
+        const cacheKey = `skill_${skill.name.toLowerCase().replace(' ', '_')}`;
+        
+        // Check if we have a cached result for this image
+        if (this.imageCache.has(cacheKey)) {
+          const cachedImage = this.imageCache.get(cacheKey);
+          // If image was successfully loaded, draw it
+          if (cachedImage && cachedImage.complete && cachedImage.naturalWidth !== 0) {
+            this.ctx.drawImage(cachedImage, rightColumnX, skillsYOffset - 16, 32, 32);
+          }
+          // If image failed to load, the default box remains visible
+        } else {
+          // Try to load and draw skill image
+          const skillImage = new Image();
+          skillImage.src = `assets/skills/${skill.name.toLowerCase().replace(' ', '_')}.png`;
+          
+          // When image loads successfully, cache it and draw it
+          skillImage.onload = () => {
+            this.imageCache.set(cacheKey, skillImage);
+            // Redraw the profile screen to show the loaded image
+            if (this.state === 'profile') {
+              this.renderProfileScreen();
+            }
+          };
+          
+          // When image fails to load, cache the failure
+          skillImage.onerror = () => {
+            this.imageCache.set(cacheKey, null);
+          };
+          
+          // If image is already loaded (from cache), draw it immediately
+          if (skillImage.complete && skillImage.naturalWidth !== 0) {
+            this.ctx.drawImage(skillImage, rightColumnX, skillsYOffset - 16, 32, 32);
+            this.imageCache.set(cacheKey, skillImage);
+          }
+        }
+        
+        // Draw skill info next to the image
+        this.ctx.fillText(`${skill.name} (Level ${skill.currentLevel}/${skill.levels})`, rightColumnX + 40, skillsYOffset);
+        this.ctx.fillText(skill.getDescription(), rightColumnX + 40, skillsYOffset + 15);
+        skillsYOffset += 35;
+      }
+    }
+    
+    // Back button
+    const buttonWidth = 150;
+    const buttonHeight = 40;
+    const buttonX = this.width / 2 - buttonWidth / 2;
+    const buttonY = this.height - 100;
+    
+    this.ctx.fillStyle = '#f1c40f';
+    this.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+    this.ctx.lineWidth = 2;
+    this.ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    this.ctx.fillStyle = '#2c3e50';
+    this.ctx.font = '18px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('Back', this.width / 2, buttonY + buttonHeight / 2 + 6);
+    
+    this.ctx.textAlign = 'left';
+  }
+
+  renderRewardScreen() {
+    // Dark overlay
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    this.ctx.fillRect(0, 0, this.width, this.height);
+    
+    // Title
+    this.ctx.fillStyle = 'white';
+    this.ctx.font = '40px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('Level Complete!', this.width / 2, this.height / 4);
+    
+    // Show rewards received if a chest has been selected
+    if (this.selectedChest !== null && this.chestRewards !== null) {
+      // Center the rewards display vertically
+      const centerY = this.height / 2 - 50;
+      
+      this.ctx.font = '24px Arial';
+      this.ctx.fillText('Rewards Received:', this.width / 2, centerY);
+      
+      // Display gold reward
+      this.ctx.font = '20px Arial';
+      this.ctx.fillStyle = '#f1c40f'; // Gold color
+      this.ctx.fillText(`Gold: +${this.chestRewards.gold}`, this.width / 2, centerY + 40);
+      
+      // Display experience reward
+      this.ctx.fillStyle = '#9b59b6'; // Purple color for experience
+      this.ctx.fillText(`Experience: +${this.chestRewards.exp}`, this.width / 2, centerY + 70);
+      
+      // Draw buttons in the center
+      const buttonWidth = 150;
+      const buttonHeight = 40;
+      const buttonY = centerY + 120;
+      const restartButtonX = this.width / 2 - buttonWidth - 10;
+      const startNewButtonX = this.width / 2 + 10;
+      
+      // Restart button
+      this.ctx.fillStyle = '#2ecc71'; // Green color
+      this.ctx.fillRect(restartButtonX, buttonY, buttonWidth, buttonHeight);
+      this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeRect(restartButtonX, buttonY, buttonWidth, buttonHeight);
+      this.ctx.fillStyle = 'white';
+      this.ctx.font = '16px Arial';
+      this.ctx.fillText('Restart', restartButtonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 5);
+      
+      // Start New button
+      this.ctx.fillStyle = '#3498db'; // Blue color
+      this.ctx.fillRect(startNewButtonX, buttonY, buttonWidth, buttonHeight);
+      this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeRect(startNewButtonX, buttonY, buttonWidth, buttonHeight);
+      this.ctx.fillStyle = 'white';
+      this.ctx.font = '16px Arial';
+      this.ctx.fillText('Start New', startNewButtonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 5);
+    } else {
+      // Show chest selection prompt
+      this.ctx.font = '24px Arial';
+      this.ctx.fillStyle = 'white';
+      this.ctx.fillText('Choose a chest to claim your rewards!', this.width / 2, this.height / 3);
+      
+      // Draw chests in the center of the screen
+      const chestWidth = 100;
+      const chestHeight = 80;
+      const chestSpacing = 50;
+      const totalWidth = 3 * chestWidth + 2 * chestSpacing;
+      const startX = (this.width - totalWidth) / 2;
+      const startY = this.height / 2 - 50;
+      
+      for (let i = 0; i < this.chests.length; i++) {
+        const chestX = startX + i * (chestWidth + chestSpacing);
+        
+        // Update chest position
+        this.chests[i].x = chestX;
+        this.chests[i].y = startY;
+        this.chests[i].width = chestWidth;
+        this.chests[i].height = chestHeight;
+        
+        // Chest body
+        this.ctx.fillStyle = '#8B4513'; // Brown color for chest
+        this.ctx.fillRect(chestX, startY, chestWidth, chestHeight);
+        
+        // Chest lid
+        this.ctx.fillStyle = '#A0522D'; // Darker brown for lid
+        this.ctx.fillRect(chestX - 5, startY, chestWidth + 10, 15);
+        
+        // Chest handle
+        this.ctx.fillStyle = '#D2691E'; // Bronze color for handle
+        this.ctx.fillRect(chestX + chestWidth / 2 - 10, startY - 10, 20, 10);
+        
+        // Chest label with ID
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText(`Chest ${i + 1}`, chestX + chestWidth / 2, startY + chestHeight / 2 + 5);
+      }
+    }
+    
+    this.ctx.textAlign = 'left';
   }
   
   // Activate a character skill
@@ -1001,8 +1498,19 @@ class Game {
     // Whirlwind is a passive skill, so don't activate it
     if (skillName === 'Whirlwind') return;
     
-    // Power Attack and Second Wind are passive skills, so don't activate them
-    if (skillName === 'Power Attack' || skillName === 'Second Wind') return;
+    // Try to activate the skill through the character
+    const activatedSkill = this.character.activateSkill(skillName);
+    
+    // If skill was successfully activated, add visual effect
+    if (activatedSkill) {
+      this.addSkillEffect(
+        this.character.x + this.character.width/2,
+        this.character.y + this.character.height/2,
+        skillName
+      );
+    }
+    
+    return activatedSkill;
   }
   
   renderAttackEffects() {
@@ -1314,14 +1822,29 @@ class Game {
   }
   
   restart() {
-    // Return to welcome screen
-    this.state = 'welcome';
-    // Create a new character to reset equipment
-    this.character = new Character(this.width / 2, this.height / 2, this);
-    // Load user data
-    this.loadUserData();
-    // Update welcome screen info
-    this.updateWelcomeScreenInfo();
+    // Restart the game with current character equipment and stats
+    this.state = 'playing';
+    this.score = 0;
+    this.gameTime = 0;
+    // Reset log information board statistics
+    this.monstersDestroyed = 0;
+    this.totalDamageCaused = 0;
+    this.damageReceived = 0;
+    this.totalHealthRecovered = 0;
+    this.combatLog = []; // Reset combat log
+    // Reset character position and health
+    this.character.x = this.width / 2;
+    this.character.y = this.height / 2;
+    this.character.health = this.character.maxHealth;
+    // Clear monsters and resources
+    this.monsters = [];
+    this.resources = [];
+    this.attackEffects = [];
+    this.deathEffects = [];
+    this.collectionEffects = [];
+    this.levelUpEffects = [];
+    this.spawnTimer = 0;
+    this.spawnInterval = 1000;
   }
   
   saveUserData() {
@@ -1344,6 +1867,56 @@ class Game {
     };
     
     localStorage.setItem('endlessSurvivalUserData', JSON.stringify(userData));
+  }
+  
+  generateChests() {
+    // Reset chest selection
+    this.selectedChest = null;
+    this.chestRewards = null;
+    
+    // Generate 3 chests with random rewards
+    this.chests = [];
+    for (let i = 0; i < 3; i++) {
+      // Generate random gold reward (10-50 gold)
+      const goldReward = Math.floor(Math.random() * 41) + 10;
+      
+      // Generate random experience reward (20-100 exp)
+      const expReward = Math.floor(Math.random() * 81) + 20;
+      
+      this.chests.push({
+        id: i,
+        gold: goldReward,
+        exp: expReward,
+        x: this.width / 2 - 150 + i * 150, // Position chests horizontally
+        y: this.height / 2 - 50,
+        width: 100,
+        height: 80,
+        opened: false
+      });
+    }
+  }
+  
+  selectChest(chestId) {
+    // If a chest is already selected, do nothing
+    if (this.selectedChest !== null) return;
+    
+    // Find the selected chest
+    const chest = this.chests.find(c => c.id === chestId);
+    if (!chest) return;
+    
+    // Mark chest as selected and opened
+    this.selectedChest = chestId;
+    chest.opened = true;
+    
+    // Apply rewards to character
+    this.character.gold += chest.gold;
+    this.character.addExperience(chest.exp);
+    
+    // Store rewards for display
+    this.chestRewards = {
+      gold: chest.gold,
+      exp: chest.exp
+    };
   }
   
   saveGame() {
@@ -1668,17 +2241,58 @@ class Game {
       this.ctx.lineWidth = 2;
       this.ctx.strokeRect(boxX, boxY, skillBoxSize, skillBoxSize);
       
-      // Draw skill name (abbreviated)
-      this.ctx.fillStyle = 'white';
-      this.ctx.font = '12px Arial';
-      let skillName = skill.name;
-      if (skillName.length > 8) {
-        skillName = skillName.substring(0, 8) + '...';
-      }
-      this.ctx.fillText(skillName, boxX + 5, boxY + 15);
+      // Create a cache key for this skill image
+      const cacheKey = `skill_${skill.name.toLowerCase().replace(' ', '_')}`;
       
-      // Draw skill level
-      this.ctx.fillText(`Lvl: ${skill.currentLevel}`, boxX + 5, boxY + 30);
+      // Check if we have a cached result for this image
+      if (this.imageCache.has(cacheKey)) {
+        const cachedImage = this.imageCache.get(cacheKey);
+        // If image was successfully loaded, draw it
+        if (cachedImage && cachedImage.complete && cachedImage.naturalWidth !== 0) {
+          this.ctx.drawImage(cachedImage, boxX, boxY, skillBoxSize, skillBoxSize);
+        }
+        // If image failed to load, draw text as fallback
+      } else {
+        // Try to load and draw skill image
+        const skillImage = new Image();
+        skillImage.src = `assets/skills/${skill.name.toLowerCase().replace(' ', '_')}.png`;
+        
+        // When image loads successfully, cache it and draw it
+        skillImage.onload = () => {
+          this.imageCache.set(cacheKey, skillImage);
+          // Redraw the UI to show the loaded image
+          if (this.state === 'playing') {
+            // We'll trigger a redraw by updating a dummy property
+            // This is a simple way to trigger a redraw without complex logic
+          }
+        };
+        
+        // When image fails to load, cache the failure
+        skillImage.onerror = () => {
+          this.imageCache.set(cacheKey, null);
+        };
+        
+        // If image is already loaded (from cache), draw it immediately
+        if (skillImage.complete && skillImage.naturalWidth !== 0) {
+          this.ctx.drawImage(skillImage, boxX, boxY, skillBoxSize, skillBoxSize);
+          this.imageCache.set(cacheKey, skillImage);
+        }
+      }
+      
+      // Draw skill name (abbreviated) - only if image failed to load
+      if (!this.imageCache.has(cacheKey) || !this.imageCache.get(cacheKey) ||
+          !this.imageCache.get(cacheKey).complete || this.imageCache.get(cacheKey).naturalWidth === 0) {
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = '12px Arial';
+        let skillName = skill.name;
+        if (skillName.length > 8) {
+          skillName = skillName.substring(0, 8) + '...';
+        }
+        this.ctx.fillText(skillName, boxX + 5, boxY + 15);
+        
+        // Draw skill level
+        this.ctx.fillText(`Lvl: ${skill.currentLevel}`, boxX + 5, boxY + 30);
+      }
       
       // Draw cooldown timer if skill is on cooldown
       if (skill.cooldown > 0) {
@@ -1686,7 +2300,7 @@ class Game {
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         this.ctx.fillRect(boxX, boxY, skillBoxSize, skillBoxSize);
         
-        // Cooldown time in seconds
+        // Cooldown time in seconds (rounded up to show full seconds)
         const cooldownSeconds = Math.ceil(skill.cooldown / 1000);
         this.ctx.fillStyle = 'white';
         this.ctx.font = '20px Arial';
