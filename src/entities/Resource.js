@@ -52,9 +52,8 @@ class Resource {
   }
 
   update() {
-    // Float animation
-    const time = Date.now() * this.animationSpeed;
-    this.y = this.baseY + Math.sin(time + this.animationOffset) * this.floatAmplitude;
+    // Keep resource at its base Y position (no shaking effect)
+    this.y = this.baseY;
     
     // Check if resource has expired (only for resources with a lifetime)
     if (this.lifeTime > 0 && Date.now() - this.creationTime > this.lifeTime) {

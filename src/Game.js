@@ -694,7 +694,8 @@ class Game {
       this.resources.push(new Resource(x, y + 20, 'health'));
     }
   }
-  
+   
+   
   checkCollisions() {
     // Character with monsters
     // Find the closest monster within attack range
