@@ -15,6 +15,7 @@ class Game {
     
     // Game state
     this.state = 'welcome'; // 'welcome', 'playing', 'gameOver', 'shop', 'reward', 'profile'
+    this.previousState = null; // Track the state we came from when entering shop
     this.score = 0;
     this.gameTime = 0;
     
@@ -85,6 +86,7 @@ class Game {
       if (this.state === 'welcome') {
         // Handle shop key
         if (e.key === 'p' || e.key === 'P') {
+          this.previousState = this.state;
           this.state = 'shop';
         }
         // Handle profile key
@@ -141,16 +143,7 @@ class Game {
         }
       } else if (this.state === 'shop') {
         // Handle shop purchases
-        if (e.key === 'Escape') {
-          // Return to the previous state
-          if (this.character.health <= 0) {
-            this.state = 'gameOver';
-          } else if (this.character.health > 0) {
-            this.state = 'playing';
-          } else {
-            this.state = 'welcome';
-          }
-        } else if (e.key >= '1' && e.key <= '4') {
+        if (e.key >= '1' && e.key <= '4') {
           this.purchaseEquipment(parseInt(e.key) - 1);
         } else if (e.key >= '5' && e.key <= '9') {
           this.purchaseSkill(parseInt(e.key) - 5);
@@ -310,6 +303,30 @@ class Game {
     // Handle shop clicks
     handleShopClick(e) {
       const { x, y } = this.getCanvasCoordinates(e);
+      
+      // Check if back button was clicked
+      const buttonWidth = 150;
+      const buttonHeight = 40;
+      const buttonX = this.width / 2 - buttonWidth / 2;
+      const buttonY = this.height - 100;
+      
+      if (x >= buttonX && x <= buttonX + buttonWidth &&
+          y >= buttonY && y <= buttonY + buttonHeight) {
+        // Return to the previous state
+        // If we're in the shop and the character is dead, go to game over
+        if (this.character.health <= 0) {
+          this.state = 'gameOver';
+        }
+        // If we're in the shop and the character is alive, go back to playing
+        else if (this.character.health > 0 && this.state === 'shop') {
+          this.state = 'playing';
+        }
+        // Otherwise, go back to welcome screen (this covers the case when entering shop from welcome)
+        else {
+          this.state = 'welcome';
+        }
+        return;
+      }
       
       // Check equipment items
       const equipmentClicked = this.checkEquipmentClick(x, y);
@@ -1786,10 +1803,26 @@ class Game {
       }
     }
     
+    // Back button
+    const buttonWidth = 150;
+    const buttonHeight = 40;
+    const buttonX = this.width / 2 - buttonWidth / 2;
+    const buttonY = this.height - 100;
+    
+    // Draw back button
+    this.ctx.fillStyle = '#f1c40f'; // Yellow color for back button
+    this.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+    this.ctx.lineWidth = 2;
+    this.ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    this.ctx.fillStyle = '#2c3e50'; // Dark color for text
+    this.ctx.font = '18px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('Back', this.width / 2, buttonY + buttonHeight / 2 + 6);
+    
     // Exit instructions
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('Press ESC to exit shop', this.width / 2, this.height - 50);
-    this.ctx.fillText('Click items to purchase', this.width / 2, this.height - 30);
+    this.ctx.fillText('Click items to purchase or use keys 1-9', this.width / 2, this.height - 50);
   }
   
   startGame() {
