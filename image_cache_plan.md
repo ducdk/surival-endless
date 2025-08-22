@@ -94,7 +94,7 @@ Replace direct Image creation with global cache:
 ### Bullet.js
 Replace direct Image creation with global cache:
 - Import global ImageCache
-- Replace `this.image = new Image(); this.image.src = 'assets/effects/attack/bulltet.png';` with `this.image = ImageCache.getImage('assets/effects/attack/bulltet.png');`
+- Replace `this.image = new Image(); this.image.src = 'assets/effects/attack/bullet.png';` with `this.image = ImageCache.getImage('assets/effects/attack/bullet.png');`
 
 ### Character.js
 Replace direct Image creation with global cache:

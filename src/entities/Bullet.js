@@ -28,7 +28,7 @@ class Bullet {
     this.maxLife = 1000;
     
     // Load bullet image from global cache
-    this.image = ImageCache.getImage('assets/effects/attack/bulltet.png');
+    this.image = ImageCache.getImage('assets/effects/attack/bullet.png');
   }
   
   update(deltaTime) {

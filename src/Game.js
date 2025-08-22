@@ -97,10 +97,14 @@ class Game {
         if (e.key === 'p' || e.key === 'P') {
           this.previousState = this.state;
           this.state = 'shop';
+          // Ẩn header khi vào shop
+          this.toggleHeader(false);
         }
         // Handle profile key
         if (e.key === 'o' || e.key === 'O') {
           this.state = 'profile';
+          // Ẩn header khi vào profile
+          this.toggleHeader(false);
         }
         return;
       }
@@ -193,6 +197,8 @@ class Game {
     if (startButton) {
       startButton.addEventListener('click', () => {
         this.startGame();
+        // Ẩn header khi bắt đầu game
+        this.toggleHeader(false);
       });
     }
     
@@ -200,6 +206,8 @@ class Game {
     if (shopButton) {
       shopButton.addEventListener('click', () => {
         this.state = 'shop';
+        // Ẩn header khi vào shop
+        this.toggleHeader(false);
       });
     }
     
@@ -207,6 +215,8 @@ class Game {
     if (profileButton) {
       profileButton.addEventListener('click', () => {
         this.state = 'profile';
+        // Ẩn header khi vào profile
+        this.toggleHeader(false);
       });
     }
       
@@ -238,6 +248,8 @@ class Game {
       if (x >= buttonX && x <= buttonX + buttonWidth &&
           y >= buttonY && y <= buttonY + buttonHeight) {
         this.state = 'welcome';
+        // Hiển thị header khi trở về welcome screen
+        this.toggleHeader(true);
         return;
       }
     }
@@ -268,6 +280,8 @@ class Game {
             y >= buttonY && y <= buttonY + buttonHeight) {
           this.state = 'welcome';
           this.updateWelcomeScreenInfo();
+          // Hiển thị header khi trở về welcome screen
+          this.toggleHeader(true);
           return;
         }
       } else {
@@ -305,6 +319,8 @@ class Game {
           y >= buttonY && y <= buttonY + buttonHeight) {
         this.state = 'welcome';
         this.updateWelcomeScreenInfo();
+        // Hiển thị header khi trở về welcome screen
+        this.toggleHeader(true);
         return;
       }
     }
@@ -341,6 +357,8 @@ class Game {
         // Otherwise, go back to welcome screen (this covers the case when entering shop from welcome)
         else {
           this.state = 'welcome';
+          // Hiển thị header khi trở về welcome screen
+          this.toggleHeader(true);
         }
         return;
       }
@@ -504,7 +522,7 @@ class Game {
   
   updateMonsters(deltaTime) {
     // Limit the number of monsters for performance
-    const maxMonsters = 100;
+    const maxMonsters = 75;
     if (this.monsters.length > maxMonsters) {
       // Remove excess monsters (oldest ones)
       this.monsters.splice(0, this.monsters.length - maxMonsters);
@@ -1227,6 +1245,17 @@ class Game {
       
       // Update welcome screen with username
       this.updateWelcomeScreenInfo();
+      
+      // Hiển thị header khi chuyển đến welcome screen
+      this.toggleHeader(true);
+    }
+  }
+  
+  // Thêm phương thức mới để ẩn/hiện header
+  toggleHeader(show) {
+    const header = document.querySelector('header');
+    if (header) {
+      header.style.display = show ? 'flex' : 'none';
     }
   }
   
