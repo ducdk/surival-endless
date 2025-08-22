@@ -1,3 +1,32 @@
+/* Header Styles */
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 32px;
+    background: #222;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.header-left .logo {
+    height: 40px;
+    width: 40px;
+    border-radius: 8px;
+}
+.header-right nav {
+    display: flex;
+    gap: 24px;
+}
+.header-right nav a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1.1em;
+    transition: color 0.2s;
+}
+.header-right nav a:hover {
+    color: #ffd700;
+}
 body {
     margin: 0;
     padding: 0;

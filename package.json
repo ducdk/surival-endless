@@ -19,7 +19,10 @@
   "author": "Endless Survival Team",
   "license": "MIT",
   "devDependencies": {
-    "serve": "^14.2.0"
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "serve": "^10.0.2",
+    "tailwindcss": "^4.1.12"
   },
   "browserslist": [
     "last 2 Chrome versions",
