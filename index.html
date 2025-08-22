@@ -9,7 +9,7 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
-    <header class="fixed top-0 left-0 w-full bg-gray-900 text-white flex items-center justify-between px-8 py-4 shadow z-50">
+    <header class=" top-0 left-0 w-full bg-gray-900 text-white flex items-center justify-between px-8 py-4 shadow z-50">
         <div class="flex items-center">
             <a href="index.html"><img src="favicon.ico" alt="Logo" class="h-10 w-10 rounded" /></a>
         </div>
@@ -18,8 +18,20 @@
             <a href="policy.html" class="hover:text-yellow-400 font-semibold">Policy</a>
         </nav>
     </header>
-    <div class="game-container pt-24">
+    <div class="game-container">
         <canvas id="gameCanvas"></canvas>
+        
+        <!-- Username Screen -->
+        <div id="usernameScreen" class="username-screen">
+            <h1 class="game-title">ENDLESS SURVIVAL</h1>
+            <p class="game-subtitle">Create your warrior</p>
+            
+            <div class="username-container">
+                <input type="text" id="usernameInput" placeholder="Enter your warrior name" maxlength="20">
+                <p id="usernameError" class="error-message"></p>
+                <button id="submitUsername" class="game-button">Start Your Journey</button>
+            </div>
+        </div>
         
         <!-- Welcome Screen -->
         <div id="welcomeScreen" class="welcome-screen">

@@ -13,8 +13,11 @@ class Game {
     this.width = canvas.width;
     this.height = canvas.height;
     
+    // User data
+    this.username = localStorage.getItem('endlessSurvivalUsername') || '';
+    
     // Game state
-    this.state = 'welcome'; // 'welcome', 'playing', 'gameOver', 'shop', 'reward', 'profile'
+    this.state = this.username ? 'welcome' : 'username'; // 'username', 'welcome', 'playing', 'gameOver', 'shop', 'reward', 'profile'
     this.previousState = null; // Track the state we came from when entering shop
     this.score = 0;
     this.gameTime = 0;
@@ -81,6 +84,12 @@ class Game {
     // Keyboard input
     window.addEventListener('keydown', (e) => {
       this.keys[e.key] = true;
+      
+      // Handle username screen
+      if (this.state === 'username' && e.key === 'Enter') {
+        this.handleUsernameSubmit();
+        return;
+      }
       
       // Handle welcome screen
       if (this.state === 'welcome') {
@@ -170,6 +179,14 @@ class Game {
     window.addEventListener('keyup', (e) => {
       this.keys[e.key] = false;
     });
+    
+    // Add event listener for username screen
+    const submitUsernameButton = document.getElementById('submitUsername');
+    if (submitUsernameButton) {
+      submitUsernameButton.addEventListener('click', () => {
+        this.handleUsernameSubmit();
+      });
+    }
     
     // Add event listeners for welcome screen buttons
     const startButton = document.getElementById('startButton');
@@ -1013,19 +1030,30 @@ class Game {
   }
   
   renderUI() {
+    // Username screen
+    if (this.state === 'username') {
+      // Hide canvas and welcome screen, show username screen
+      document.getElementById('gameCanvas').style.display = 'none';
+      document.getElementById('welcomeScreen').style.display = 'none';
+      document.getElementById('usernameScreen').style.display = 'block';
+      return;
+    }
+    
     // Welcome screen
     if (this.state === 'welcome') {
-      // Hide canvas and show welcome screen
+      // Hide canvas and username screen, show welcome screen
       document.getElementById('gameCanvas').style.display = 'none';
+      document.getElementById('usernameScreen').style.display = 'none';
       document.getElementById('welcomeScreen').style.display = 'block';
       
       // Update character info
       this.updateWelcomeScreenInfo();
       return;
     } else {
-      // Show canvas and hide welcome screen
+      // Show canvas and hide other screens
       document.getElementById('gameCanvas').style.display = 'block';
       document.getElementById('welcomeScreen').style.display = 'none';
+      document.getElementById('usernameScreen').style.display = 'none';
     }
     
     // Profile screen
@@ -1173,6 +1201,35 @@ class Game {
     }
   }
   
+  // Handle username submission
+  handleUsernameSubmit() {
+    const usernameInput = document.getElementById('usernameInput');
+    const errorElement = document.getElementById('usernameError');
+    
+    if (usernameInput && errorElement) {
+      const username = usernameInput.value;
+      
+      // Validate username
+      if (!username || username.trim().length === 0) {
+        errorElement.textContent = 'Please enter a name for your warrior';
+        return;
+      }
+      
+      if (username.trim().length < 3) {
+        errorElement.textContent = 'Name must be at least 3 characters';
+        return;
+      }
+      
+      // Save username and change to welcome screen
+      localStorage.setItem('endlessSurvivalUsername', username.trim());
+      this.username = username.trim();
+      this.state = 'welcome';
+      
+      // Update welcome screen with username
+      this.updateWelcomeScreenInfo();
+    }
+  }
+  
   renderProfileScreen() {
     // Dark overlay
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
@@ -1186,7 +1243,7 @@ class Game {
     
     // Player name and level
     this.ctx.font = '24px Arial';
-    this.ctx.fillText(`Level ${this.character.level} Warrior`, this.width / 2, 100);
+    this.ctx.fillText(`${this.username} - Level ${this.character.level} Warrior`, this.width / 2, 100);
     
     // Define column positions
     const leftColumnX = 100;
@@ -2348,6 +2405,12 @@ class Game {
   
   // Update character information on the welcome screen
   updateWelcomeScreenInfo() {
+    // Add username to welcome screen title if available
+    const gameTitle = document.querySelector('.game-title');
+    if (gameTitle && this.username) {
+      gameTitle.textContent = `ENDLESS SURVIVAL - ${this.username}`;
+    }
+    
     // Update character stats
     const healthElement = document.getElementById('characterHealth');
     if (healthElement) {
