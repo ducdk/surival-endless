@@ -1,6 +1,7 @@
 import Skill from './Skill.js';
 import Bullet from './Bullet.js';
 import ImageCache from './ImageCache.js';
+import CharacterAnimator from './CharacterAnimator.js';
 
 // Character entity for the Endless Survival game
 class Character {
@@ -26,20 +27,10 @@ class Character {
     this.bullets = []; // Bullets array
     this.game = game; // Reference to the Game instance
     
-    // Movement animation properties
+    // Animation system
+    this.animator = new CharacterAnimator();
     this.direction = 'south'; // Default direction
     this.isMoving = false;
-    this.animationImages = {
-      'east': ImageCache.getImage('assets/effects/walking/frames_east.gif'),
-      'north-east': ImageCache.getImage('assets/effects/walking/frames_north-east.gif'),
-      'north': ImageCache.getImage('assets/effects/walking/frames_north.gif'),
-      'north-west': ImageCache.getImage('assets/effects/walking/frames_north-west.gif'),
-      'west': ImageCache.getImage('assets/effects/walking/frames_west.gif'),
-      'south-west': ImageCache.getImage('assets/effects/walking/frames_south-west.gif'),
-      'south': ImageCache.getImage('assets/effects/walking/frames_south.gif'),
-      'south-east': ImageCache.getImage('assets/effects/walking/frames_south-east.gif'),
-      'idle': ImageCache.getImage('assets/character.png')
-    };
     
     // Skill-related properties
     this.secondWindTimer = 0; // Timer for Second Wind passive healing
@@ -54,17 +45,11 @@ class Character {
     this.whirlwindRadius = 90; // Initial radius of the whirlwind (matches level 1 with new formula)
     this.whirlwindBallCount = 10; // Number of balls
     
-    // Load character image from global cache
-    this.image = ImageCache.getImage('assets/character.png');
-    
     // Initialize skills
     this.initializeSkills();
     
     // Initialize whirlwind balls
     this.initializeWhirlwindBalls();
-    
-    // Preload animation images
-    this.preloadAnimations();
   }
   
   initializeWhirlwindBalls() {
@@ -81,15 +66,7 @@ class Character {
   }
   
   // Preload all animation images
-  preloadAnimations() {
-    // Trigger loading of all animation images
-    Object.entries(this.animationImages).forEach(([direction, img]) => {
-      if (img && !img.complete) {
-        img.onload = () => console.log(`Character animation for ${direction} loaded`);
-        img.onerror = () => console.error(`Failed to load character animation for ${direction}`);
-      }
-    });
-  }
+  // Animation handling is now done by CharacterAnimator class
   
   update(deltaTime) {
     // Update character logic
@@ -100,6 +77,9 @@ class Character {
         if (this.attackCooldown < 0) this.attackCooldown = 0;
       }
     }
+    
+    // Update animation
+    this.animator.update(performance.now());
     
     // Update Second Wind passive healing
     const secondWindSkill = this.getSkill('Second Wind');
@@ -157,26 +137,8 @@ class Character {
   }
 
   render(ctx, screenX, screenY) {
-    // Choose appropriate image based on movement state and direction
-    let image;
-    
-    if (this.isMoving && this.direction) {
-      image = this.animationImages[this.direction];
-    } else {
-      image = this.animationImages['idle']; // Default to idle image when not moving
-    }
-    
-    // Render character image if loaded, otherwise render colored rectangle or fallback to static image
-    if (image && image.complete) {
-      ctx.drawImage(image, screenX, screenY, this.width, this.height);
-    } else if (this.image && this.image.complete) {
-      // Fallback to static image if animation isn't loaded
-      ctx.drawImage(this.image, screenX, screenY, this.width, this.height);
-    } else {
-      // Final fallback to colored rectangle if no images are available
-      ctx.fillStyle = '#3498db';
-      ctx.fillRect(screenX, screenY, this.width, this.height);
-    }
+    // Use the animator to render the character
+    this.animator.render(ctx, screenX, screenY, this.width, this.height);
     
     // Render whirlwind balls if skill is unlocked
     const whirlwindSkill = this.getSkill('Whirlwind');
@@ -280,10 +242,12 @@ class Character {
     // Update movement animation state
     if (dx === 0 && dy === 0) {
       this.isMoving = false;
+      this.animator.setMoving(false);
       return;
     }
     
     this.isMoving = true;
+    this.animator.setMoving(true);
     
     // Determine movement direction (8 directions)
     // Calculate angle of movement
@@ -300,23 +264,33 @@ class Character {
     // South: -112.5 to -67.5 degrees
     // South-East: -67.5 to -22.5 degrees
     
+    // Make sure we properly handle the direction angles
     if (degrees >= -22.5 && degrees < 22.5) {
       this.direction = 'east';
     } else if (degrees >= 22.5 && degrees < 67.5) {
-      this.direction = 'north-east';
+      // this.direction = 'north-east';
+      this.direction = 'south-east';
     } else if (degrees >= 67.5 && degrees < 112.5) {
-      this.direction = 'north';
+      // this.direction = 'north';
+      this.direction = 'south';
     } else if (degrees >= 112.5 && degrees < 157.5) {
-      this.direction = 'north-west';
+      // this.direction = 'north-west';
+      this.direction = 'south-west';
     } else if (degrees >= 157.5 || degrees < -157.5) {
       this.direction = 'west';
     } else if (degrees >= -157.5 && degrees < -112.5) {
-      this.direction = 'south-west';
+      this.direction = 'north-west';
+      // this.direction = 'south-west';
     } else if (degrees >= -112.5 && degrees < -67.5) {
-      this.direction = 'south';
+      this.direction = 'north';
+      // this.direction = 'south';
     } else if (degrees >= -67.5 && degrees < -22.5) {
-      this.direction = 'south-east';
+      this.direction = 'north-east';
+      // this.direction = 'south-east';
     }
+    
+    // Update the animator's direction
+    this.animator.setDirection(this.direction);
     
     // Move at normal speed
     let speed = this.speed;
