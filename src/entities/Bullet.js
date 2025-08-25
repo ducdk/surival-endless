@@ -2,7 +2,7 @@
 import ImageCache from './ImageCache.js';
 
 class Bullet {
-  constructor(startX, startY, targetX, targetY, speed = 10, damage = 10, color = '#ffffff', isPlayerBullet = true) {
+  constructor(startX, startY, targetX, targetY, speed = 6, damage = 10, color = '#ffffff', isPlayerBullet = true) {
     this.x = startX;
     this.y = startY;
     this.width = 16;

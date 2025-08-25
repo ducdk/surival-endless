@@ -8,6 +8,7 @@ class Resource {
     this.type = type;
     this.width = 20;
     this.height = 20;
+    this.icon = null;
     this.collected = false;
     
     // Animation properties
@@ -26,30 +27,35 @@ class Resource {
         this.value = 25; // Health points
         // Health resources should still disappear after a period
         this.lifeTime = 10; // 10 seconds
+        this.icon = '❤️';
         break;
       case 'gold':
         this.color = '#f1c40f';
         this.value = 1; // Gold amount
         // Gold resources should not disappear
         this.lifeTime = 0; // No timeout
+        this.icon = '💰';
         break;
       case 'experience':
         this.color = '#9b59b6';
         this.value = 10; // Experience points
         // Experience resources should not disappear
         this.lifeTime = 0; // No timeout
+        this.icon = '⚡';
         break;
       case 'blood':
         this.color = '#ff0000';
         this.value = 5; // Blood amount
         // Blood resources should not disappear
         this.lifeTime = 0; // No timeout
+        this.icon = '🩸';
         break;
       default:
         this.color = '#3498db';
         this.value = 0;
         // Default resources should still disappear after a period
         this.lifeTime = 10000; // 10 seconds
+        this.icon = '⚡';
     }
   }
 

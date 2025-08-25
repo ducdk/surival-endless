@@ -330,6 +330,12 @@ class Character {
       const dy = targetY - centerY;
       const targetAngle = Math.atan2(dy, dx);
       
+      // Update character direction based on target angle
+      this.updateDirectionFromAngle(targetAngle);
+      
+      // Trigger fireball animation
+      this.animator.setFiring(true);
+      
       // Create bullets with spread
       for (let i = 0; i < bulletCount; i++) {
         // Calculate spread angle for this bullet
@@ -361,6 +367,33 @@ class Character {
       return true;
     }
     return false;
+  }
+  
+  // Add new helper method to update character direction based on attack angle
+  updateDirectionFromAngle(angle) {
+    const degrees = angle * (180 / Math.PI);
+    
+    // Map angle to 8 directions
+    if (degrees >= -22.5 && degrees < 22.5) {
+      this.direction = 'east';
+    } else if (degrees >= 22.5 && degrees < 67.5) {
+      this.direction = 'south-east';
+    } else if (degrees >= 67.5 && degrees < 112.5) {
+      this.direction = 'south';
+    } else if (degrees >= 112.5 && degrees < 157.5) {
+      this.direction = 'south-west';
+    } else if (degrees >= 157.5 || degrees < -157.5) {
+      this.direction = 'west';
+    } else if (degrees >= -157.5 && degrees < -112.5) {
+      this.direction = 'north-west';
+    } else if (degrees >= -112.5 && degrees < -67.5) {
+      this.direction = 'north';
+    } else if (degrees >= -67.5 && degrees < -22.5) {
+      this.direction = 'north-east';
+    }
+    
+    // Update the animator's direction
+    this.animator.setDirection(this.direction);
   }
   
   // Update bullets

@@ -17,7 +17,7 @@ class Monster {
         this.health = Math.floor(120 * difficulty); // Reduced from 150
         this.maxHealth = this.health;
         this.damage = Math.floor(12 * difficulty); // Reduced from 15
-        this.speed = 1;
+        this.speed = 0.75;
         this.color = '#e74c3c';
         this.imagePath = 'assets/monster/tank.png';
         break;
@@ -25,7 +25,7 @@ class Monster {
         this.health = Math.floor(40 * difficulty); // Reduced from 50
         this.maxHealth = this.health;
         this.damage = Math.floor(6 * difficulty); // Reduced from 8
-        this.speed = 4;
+        this.speed = 2;
         this.color = '#f39c12';
         this.imagePath = 'assets/monster/fast.png';
         break;
@@ -33,7 +33,7 @@ class Monster {
         this.health = Math.floor(55 * difficulty); // Reduced from 70
         this.maxHealth = this.health;
         this.damage = Math.floor(9 * difficulty); // Reduced from 12
-        this.speed = 2;
+        this.speed = 1;
         this.color = '#9b59b6';
         this.range = 150;
         this.imagePath = 'assets/monster/ranged.png';
@@ -42,7 +42,7 @@ class Monster {
         this.health = Math.floor(240 * difficulty); // Reduced from 300
         this.maxHealth = this.health;
         this.damage = Math.floor(20 * difficulty); // Reduced from 25
-        this.speed = 1;
+        this.speed = 0.75;
         this.color = '#ff6600';
         this.imagePath = 'assets/monster/elite.png';
         break;
@@ -50,7 +50,7 @@ class Monster {
         this.health = Math.floor(800 * difficulty); // Reduced from 1000
         this.maxHealth = this.health;
         this.damage = Math.floor(40 * difficulty); // Reduced from 50
-        this.speed = 1;
+        this.speed = 0.75;
         this.color = '#800080';
         this.width = 60;
         this.height = 60;
@@ -60,7 +60,7 @@ class Monster {
         this.health = Math.floor(80 * difficulty); // Reduced from 100
         this.maxHealth = this.health;
         this.damage = Math.floor(8 * difficulty); // Reduced from 10
-        this.speed = 3;
+        this.speed = 1;
         this.color = '#2ecc71';
         this.imagePath = 'assets/monster/normal.png'; // We'll need to create this or use a default
     }

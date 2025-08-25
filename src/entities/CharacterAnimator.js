@@ -10,10 +10,14 @@ class CharacterAnimator {
     this.animationSpeed = 100; // milliseconds per frame
     this.lastFrameTime = 0;
     this.isMoving = false;
+    this.isFiring = false; // Add state for firing animation
     this.animations = {};
-    this.frameCount = 4; // Number of frames per direction, based on the actual files
+    this.fireballAnimations = {}; // Add fireball animations object
+    this.frameCount = 4; // Number of frames per direction for walking
+    this.fireballFrameCount = 6; // Number of frames per direction for fireball
     
     this.loadAnimations();
+    this.loadFireballAnimations(); // Load fireball animations
   }
   
   loadAnimations() {
@@ -41,6 +45,29 @@ class CharacterAnimator {
     // Add idle animation (just using the static character image)
     this.animations['idle'] = ['assets/character.png'];
     this.imageCache.preloadImage('assets/character.png');
+  }
+  
+  // New method to load fireball animations
+  loadFireballAnimations() {
+    // For each direction, load all fireball frames
+    this.directions.forEach(direction => {
+      this.fireballAnimations[direction] = [];
+      
+      // The folder structure uses dashes, so we need to keep the original format
+      const dirName = direction; // Already in correct format with dashes
+      
+      // Load all frames for this direction
+      for (let i = 0; i < this.fireballFrameCount; i++) {
+        const frameName = `frame_${i.toString().padStart(3, '0')}`;
+        const imagePath = `assets/animations/fireball/${dirName}/${frameName}.png`;
+        
+        // Use the existing image cache instead of loading directly
+        this.fireballAnimations[direction].push(imagePath);
+        
+        // Preload the image into cache
+        this.imageCache.preloadImage(imagePath);
+      }
+    });
   }
   
   setDirection(direction) {
@@ -73,36 +100,60 @@ class CharacterAnimator {
     }
   }
   
+  // New method to set firing state
+  setFiring(isFiring) {
+    this.isFiring = isFiring;
+    if (isFiring) {
+      // Reset to first frame when starting to fire
+      this.currentFrame = 0;
+    }
+  }
+  
   update(timestamp) {
-    if (!this.isMoving) return;
+    // Only update animation if moving or firing
+    if (!this.isMoving && !this.isFiring) return;
+    
+    // Get the appropriate frame count based on animation type
+    const frameCount = this.isFiring ? this.fireballFrameCount : this.frameCount;
     
     // Update animation frame based on time
     if (timestamp - this.lastFrameTime > this.animationSpeed) {
-      this.currentFrame = (this.currentFrame + 1) % this.frameCount;
+      this.currentFrame = (this.currentFrame + 1) % frameCount;
       this.lastFrameTime = timestamp;
+      
+      // If firing and we've completed the animation, stop firing
+      if (this.isFiring && this.currentFrame === 0) {
+        this.isFiring = false;
+      }
     }
   }
   
   getCurrentFrame() {
-    // If not moving, return idle frame
-    if (!this.isMoving) {
+    // Determine which animation set to use
+    if (this.isFiring) {
+      // Use fireball animation
+      const frames = this.fireballAnimations[this.currentDirection];
+      if (!frames || frames.length === 0) {
+        console.warn(`No fireball animation frames found for direction: ${this.currentDirection}`);
+        return this.imageCache.getImage('assets/character.png'); // Fallback
+      }
+      
+      const frameIndex = this.currentFrame % this.fireballFrameCount;
+      return this.imageCache.getImage(frames[frameIndex]);
+    } else if (!this.isMoving) {
+      // If not moving, return idle frame
       return this.imageCache.getImage('assets/character.png');
+    } else {
+      // Use walking animation
+      const frames = this.animations[this.currentDirection];
+      if (!frames || frames.length === 0) {
+        console.warn(`No walking animation frames found for direction: ${this.currentDirection}`);
+        return this.imageCache.getImage('assets/character.png'); // Fallback
+      }
+      
+      const frameIndex = this.currentFrame % this.frameCount;
+      return this.imageCache.getImage(frames[frameIndex]);
     }
-    
-    const direction = this.currentDirection;
-    
-    // Check if the animation for this direction exists
-    if (!this.animations[direction] || this.animations[direction].length === 0) {
-      console.warn(`No animation frames found for direction: ${direction}`);
-      return this.imageCache.getImage('assets/character.png'); // Fallback
-    }
-    
-    // Get the current frame for this direction
-    const frames = this.animations[direction];
-    const frameIndex = this.currentFrame % frames.length;
-    const imagePath = frames[frameIndex];
-    
-    return this.imageCache.getImage(imagePath);
   }
   
   render(context, x, y, width, height) {
