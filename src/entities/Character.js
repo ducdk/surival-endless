@@ -26,6 +26,21 @@ class Character {
     this.bullets = []; // Bullets array
     this.game = game; // Reference to the Game instance
     
+    // Movement animation properties
+    this.direction = 'south'; // Default direction
+    this.isMoving = false;
+    this.animationImages = {
+      'east': ImageCache.getImage('assets/effects/walking/frames_east.gif'),
+      'north-east': ImageCache.getImage('assets/effects/walking/frames_north-east.gif'),
+      'north': ImageCache.getImage('assets/effects/walking/frames_north.gif'),
+      'north-west': ImageCache.getImage('assets/effects/walking/frames_north-west.gif'),
+      'west': ImageCache.getImage('assets/effects/walking/frames_west.gif'),
+      'south-west': ImageCache.getImage('assets/effects/walking/frames_south-west.gif'),
+      'south': ImageCache.getImage('assets/effects/walking/frames_south.gif'),
+      'south-east': ImageCache.getImage('assets/effects/walking/frames_south-east.gif'),
+      'idle': ImageCache.getImage('assets/character.png')
+    };
+    
     // Skill-related properties
     this.secondWindTimer = 0; // Timer for Second Wind passive healing
     this.secondWindInterval = 5000; // Heal every 5 seconds (5000ms)
@@ -47,6 +62,9 @@ class Character {
     
     // Initialize whirlwind balls
     this.initializeWhirlwindBalls();
+    
+    // Preload animation images
+    this.preloadAnimations();
   }
   
   initializeWhirlwindBalls() {
@@ -60,6 +78,17 @@ class Character {
         angle: angle
       });
     }
+  }
+  
+  // Preload all animation images
+  preloadAnimations() {
+    // Trigger loading of all animation images
+    Object.entries(this.animationImages).forEach(([direction, img]) => {
+      if (img && !img.complete) {
+        img.onload = () => console.log(`Character animation for ${direction} loaded`);
+        img.onerror = () => console.error(`Failed to load character animation for ${direction}`);
+      }
+    });
   }
   
   update(deltaTime) {
@@ -128,10 +157,23 @@ class Character {
   }
 
   render(ctx, screenX, screenY) {
-    // Render character image if loaded, otherwise render colored rectangle
-    if (this.image && this.image.complete) {
+    // Choose appropriate image based on movement state and direction
+    let image;
+    
+    if (this.isMoving && this.direction) {
+      image = this.animationImages[this.direction];
+    } else {
+      image = this.animationImages['idle']; // Default to idle image when not moving
+    }
+    
+    // Render character image if loaded, otherwise render colored rectangle or fallback to static image
+    if (image && image.complete) {
+      ctx.drawImage(image, screenX, screenY, this.width, this.height);
+    } else if (this.image && this.image.complete) {
+      // Fallback to static image if animation isn't loaded
       ctx.drawImage(this.image, screenX, screenY, this.width, this.height);
     } else {
+      // Final fallback to colored rectangle if no images are available
       ctx.fillStyle = '#3498db';
       ctx.fillRect(screenX, screenY, this.width, this.height);
     }
@@ -235,9 +277,49 @@ class Character {
   }
 
   move(dx, dy) {
+    // Update movement animation state
+    if (dx === 0 && dy === 0) {
+      this.isMoving = false;
+      return;
+    }
+    
+    this.isMoving = true;
+    
+    // Determine movement direction (8 directions)
+    // Calculate angle of movement
+    const angle = Math.atan2(dy, dx);
+    const degrees = angle * (180 / Math.PI);
+    
+    // Map angle to 8 directions
+    // East: -22.5 to 22.5 degrees
+    // North-East: 22.5 to 67.5 degrees
+    // North: 67.5 to 112.5 degrees
+    // North-West: 112.5 to 157.5 degrees
+    // West: 157.5 to -157.5 degrees
+    // South-West: -157.5 to -112.5 degrees
+    // South: -112.5 to -67.5 degrees
+    // South-East: -67.5 to -22.5 degrees
+    
+    if (degrees >= -22.5 && degrees < 22.5) {
+      this.direction = 'east';
+    } else if (degrees >= 22.5 && degrees < 67.5) {
+      this.direction = 'north-east';
+    } else if (degrees >= 67.5 && degrees < 112.5) {
+      this.direction = 'north';
+    } else if (degrees >= 112.5 && degrees < 157.5) {
+      this.direction = 'north-west';
+    } else if (degrees >= 157.5 || degrees < -157.5) {
+      this.direction = 'west';
+    } else if (degrees >= -157.5 && degrees < -112.5) {
+      this.direction = 'south-west';
+    } else if (degrees >= -112.5 && degrees < -67.5) {
+      this.direction = 'south';
+    } else if (degrees >= -67.5 && degrees < -22.5) {
+      this.direction = 'south-east';
+    }
+    
     // Move at normal speed
     let speed = this.speed;
-    
     this.x += dx * speed;
     this.y += dy * speed;
   }

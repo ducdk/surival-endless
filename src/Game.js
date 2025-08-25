@@ -2,6 +2,7 @@ import Character from './entities/Character.js';
 import Monster from './entities/Monster.js';
 import Resource from './entities/Resource.js';
 import Equipment from './entities/Equipment.js';
+import ImageCache from './entities/ImageCache.js';
 import SoundManager from './SoundManager.js';
 
 class Game {
@@ -33,6 +34,10 @@ class Game {
     this.previousState = null; // Track the state we came from when entering shop
     this.score = 0;
     this.gameTime = 0;
+    
+    // Shop UI state
+    this.shopTab = 'equipment'; // Default tab
+    this.shopScrollOffset = 0;  // Default scroll position
     
     // Log information board statistics
     this.monstersDestroyed = 0;
@@ -154,24 +159,30 @@ class Game {
       
       // Handle shop
       if (e.key === 'p' || e.key === 'P') {
-        if (this.state === 'playing' || this.state === 'welcome') {
+        if (this.state === 'playing') {
+          this.previousState = 'playing';
+          this.state = 'shop';
+        } else if (this.state === 'welcome') {
+          this.previousState = 'welcome';
           this.state = 'shop';
         } else if (this.state === 'shop') {
           // Return to the previous state
           if (this.character.health <= 0) {
             this.state = 'gameOver';
-          } else if (this.character.health > 0) {
+          } else if (this.previousState === 'playing') {
             this.state = 'playing';
           } else {
             this.state = 'welcome';
+            // Show header when returning to welcome screen
+            this.toggleHeader(true);
           }
         }
       } else if (this.state === 'shop') {
-        // Handle shop purchases
-        if (e.key >= '1' && e.key <= '4') {
-          this.purchaseEquipment(parseInt(e.key) - 1);
-        } else if (e.key >= '5' && e.key <= '9') {
-          this.purchaseSkill(parseInt(e.key) - 5);
+        // Handle shop tab switching
+        if (e.key === '1') {
+          this.shopTab = 'equipment';
+        } else if (e.key === '2') {
+          this.shopTab = 'skills';
         }
       } else if (this.state === 'playing') {
         // Handle skill activation (keys Q, E, R, F)
@@ -217,6 +228,7 @@ class Game {
     const shopButton = document.getElementById('shopButton');
     if (shopButton) {
       shopButton.addEventListener('click', () => {
+        this.previousState = 'welcome';
         this.state = 'shop';
         // Ẩn header khi vào shop
         this.toggleHeader(false);
@@ -232,19 +244,261 @@ class Game {
       });
     }
       
-      // Mouse input for shop, game over screen, reward screen, and profile screen
-      this.canvas.addEventListener('click', (e) => {
-        if (this.state === 'shop') {
-          this.handleShopClick(e);
-        } else if (this.state === 'gameOver') {
-          this.handleGameOverClick(e);
-        } else if (this.state === 'reward') {
-          this.handleRewardClick(e);
-        } else if (this.state === 'profile') {
-          this.handleProfileClick(e);
-        }
-      });
+    // Mouse input for shop, game over screen, reward screen, and profile screen
+    this.canvas.addEventListener('click', (e) => {
+      if (this.state === 'shop') {
+        this.handleShopClick(e);
+      } else if (this.state === 'gameOver') {
+        this.handleGameOverClick(e);
+      } else if (this.state === 'reward') {
+        this.handleRewardClick(e);
+      } else if (this.state === 'profile') {
+        this.handleProfileClick(e);
+      }
+    });
+      
+    // Add mouse wheel support for shop scrolling
+    this.canvas.addEventListener('wheel', (e) => {
+      if (this.state === 'shop') {
+        e.preventDefault();
+        const scrollAmount = e.deltaY > 0 ? 30 : -30;
+        
+        // Calculate content height
+        const contentHeight = this.shopTab === 'skills' ? 
+          Math.ceil(this.character.getAvailableSkills().length / 2) * 120 : 
+          Math.ceil(4 / 2) * 120; // Height of items with spacing
+        
+        const contentAreaHeight = this.height - 180 - 120; // Top margin + bottom margin
+        const maxScroll = Math.max(0, contentHeight - contentAreaHeight);
+        
+        this.shopScrollOffset = Math.max(0, Math.min(maxScroll, this.shopScrollOffset + scrollAmount));
+      }
+    }, { passive: false });
+  }
+  
+  // Get count of shop items for current tab for scrolling calculation
+  getShopItemsCount() {
+    if (this.shopTab === 'equipment') {
+      return 4; // Number of equipment types
+    } else if (this.shopTab === 'skills') {
+      return this.character.getAvailableSkills().length;
     }
+    return 0;
+  }
+  
+  // Handle shop clicks
+  handleShopClick(e) {
+    const { x, y } = this.getCanvasCoordinates(e);
+    
+    // Define tab constants at the beginning
+    const tabWidth = 150;
+    const tabHeight = 40;
+    const tabY = 120;
+    const equipmentTabX = (this.width / 2) - tabWidth - 10;
+    const skillsTabX = (this.width / 2) + 10;
+    
+    // Check if back button was clicked
+    const buttonWidth = 150;
+    const buttonHeight = 40;
+    const buttonX = this.width / 2 - buttonWidth / 2;
+    const buttonY = this.height - 70;
+    
+    if (x >= buttonX && x <= buttonX + buttonWidth &&
+        y >= buttonY && y <= buttonY + buttonHeight) {
+      // Return to the previous state
+      if (this.character.health <= 0) {
+        this.state = 'gameOver';
+      } 
+      // If coming from the playing state, return to playing
+      else if (this.previousState === 'playing') {
+        this.state = 'playing';
+      } 
+      // If coming from the welcome state, return to welcome
+      else {
+        this.state = 'welcome';
+        // Show header when returning to welcome screen
+        this.toggleHeader(true);
+      }
+      return;
+    }
+    
+    // Equipment tab
+    if (x >= equipmentTabX && x <= equipmentTabX + tabWidth && 
+        y >= tabY && y <= tabY + tabHeight) {
+      this.shopTab = 'equipment';
+      this.shopScrollOffset = 0; // Reset scroll position on tab change
+      return;
+    }
+    
+    // Skills tab
+    if (x >= skillsTabX && x <= skillsTabX + tabWidth && 
+        y >= tabY && y <= tabY + tabHeight) {
+      this.shopTab = 'skills';
+      this.shopScrollOffset = 0; // Reset scroll position on tab change
+      return;
+    }
+    
+    // Account for scroll offset in content area
+    const contentAreaY = tabY + tabHeight + 20;
+    
+    // Check if we clicked in the clipped content area
+    if (y >= contentAreaY && y <= this.height - 120) {
+      const adjustedY = y + this.shopScrollOffset;
+      
+      if (this.shopTab === 'equipment') {
+        this.handleShopEquipmentClick(x, adjustedY, contentAreaY);
+      } else if (this.shopTab === 'skills') {
+        this.handleShopSkillsClick(x, adjustedY, contentAreaY);
+      }
+    }
+  }
+  
+  // Handle clicks on equipment items in shop
+  handleShopEquipmentClick(x, y, startY) {
+    const equipmentTypes = ['sword', 'shield', 'boots', 'amulet'];
+    const itemWidth = 350;
+    const itemHeight = 100;
+    const itemSpacing = 20;
+    const columns = 2;
+    const columnWidth = itemWidth + itemSpacing;
+    const startX = (this.width - (columns * columnWidth - itemSpacing)) / 2;
+    
+    for (let i = 0; i < equipmentTypes.length; i++) {
+      const col = i % columns;
+      const row = Math.floor(i / columns);
+      const itemX = startX + col * columnWidth;
+      const itemY = startY + row * (itemHeight + itemSpacing);
+      
+      // Check if click is within item bounds
+      if (x >= itemX && x <= itemX + itemWidth && y >= itemY && y <= itemY + itemHeight) {
+        // Check if player has this equipment
+        const existingEquipment = this.character.inventory.find(item => item.type === equipmentTypes[i]);
+        
+        // Button coordinates
+        const buttonWidth = 80;
+        const buttonHeight = 28;
+        const buttonX = itemX + itemWidth - buttonWidth - 10;
+        const buttonY = itemY + itemHeight - buttonHeight - 10;
+        
+        // Check if button was clicked
+        if (x >= buttonX && x <= buttonX + buttonWidth && y >= buttonY && y <= buttonY + buttonHeight) {
+          if (existingEquipment) {
+            // Upgrade existing equipment if not max level
+            if (existingEquipment.level < 10) {
+              const upgradeCost = existingEquipment.getUpgradeCost();
+              if (this.character.gold >= upgradeCost) {
+                this.character.gold -= upgradeCost;
+                existingEquipment.upgrade();
+                
+                // Apply upgrade bonus
+                this.character.applyEquipmentBonus(existingEquipment);
+                
+                console.log(`Upgraded ${existingEquipment.name} to level ${existingEquipment.level}`);
+                // Play purchase sound
+                this.soundManager.playSound('purchase');
+                
+                // Update welcome screen info
+                if (this.state === 'welcome' || this.state === 'shop') {
+                  this.updateWelcomeScreenInfo();
+                }
+              }
+            }
+          } else {
+            // Buy new equipment
+            const equipment = new Equipment(equipmentTypes[i], 1);
+            if (this.character.gold >= equipment.cost) {
+              this.character.gold -= equipment.cost;
+              this.character.addEquipment(equipment);
+              console.log(`Purchased ${equipment.name}`);
+              
+              // Play purchase sound
+              this.soundManager.playSound('purchase');
+              
+              // Update welcome screen info
+              if (this.state === 'welcome' || this.state === 'shop') {
+                this.updateWelcomeScreenInfo();
+              }
+            }
+          }
+        }
+        return;
+      }
+    }
+  }
+  
+  // Handle clicks on skill items in shop
+  handleShopSkillsClick(x, y, startY) {
+    const availableSkills = this.character.getAvailableSkills();
+    const skillWidth = 350;
+    const skillHeight = 100;
+    const skillSpacing = 20;
+    const columns = 2;
+    const columnWidth = skillWidth + skillSpacing;
+    const startX = (this.width - (columns * columnWidth - skillSpacing)) / 2;
+    
+    for (let i = 0; i < availableSkills.length; i++) {
+      const col = i % columns;
+      const row = Math.floor(i / columns);
+      const skillX = startX + col * columnWidth;
+      const skillY = startY + row * (skillHeight + skillSpacing);
+      
+      const skill = availableSkills[i];
+      
+      // Check if click is within skill bounds
+      if (x >= skillX && x <= skillX + skillWidth && y >= skillY && y <= skillY + skillHeight) {
+        // Check if skill is unlocked by level
+        if (this.character.level < skill.unlockLevel) {
+          return; // Skip locked skills
+        }
+        
+        // Button coordinates
+        const buttonWidth = 80;
+        const buttonHeight = 28;
+        const buttonX = skillX + skillWidth - buttonWidth - 10;
+        const buttonY = skillY + skillHeight - buttonHeight - 10;
+        
+        // Check if button was clicked
+        if (x >= buttonX && x <= buttonX + buttonWidth && y >= buttonY && y <= buttonY + buttonHeight) {
+          if (skill.currentLevel > 0) {
+            // Upgrade existing skill
+            if (skill.canUpgrade()) {
+              const upgradeCost = skill.getUpgradeCost();
+              if (this.character.gold >= upgradeCost) {
+                this.character.gold -= upgradeCost;
+                skill.upgrade();
+                console.log(`Upgraded ${skill.name} to level ${skill.currentLevel}`);
+                
+                // Play purchase sound
+                this.soundManager.playSound('purchase');
+                
+                // Update welcome screen info
+                if (this.state === 'welcome' || this.state === 'shop') {
+                  this.updateWelcomeScreenInfo();
+                }
+              }
+            }
+          } else {
+            // Buy new skill
+            const purchaseCost = skill.costPerLevel;
+            if (this.character.gold >= purchaseCost) {
+              this.character.gold -= purchaseCost;
+              skill.upgrade(); // First upgrade from 0 to 1
+              console.log(`Purchased ${skill.name}`);
+              
+              // Play purchase sound
+              this.soundManager.playSound('purchase');
+              
+              // Update welcome screen info
+              if (this.state === 'welcome' || this.state === 'shop') {
+                this.updateWelcomeScreenInfo();
+              }
+            }
+          }
+        }
+        return;
+      }
+    }
+  }
     
     // Handle profile screen clicks
     handleProfileClick(e) {
@@ -345,96 +599,8 @@ class Game {
       return { x, y };
     }
     
-    // Handle shop clicks
-    handleShopClick(e) {
-      const { x, y } = this.getCanvasCoordinates(e);
-      
-      // Check if back button was clicked
-      const buttonWidth = 150;
-      const buttonHeight = 40;
-      const buttonX = this.width / 2 - buttonWidth / 2;
-      const buttonY = this.height - 100;
-      
-      if (x >= buttonX && x <= buttonX + buttonWidth &&
-          y >= buttonY && y <= buttonY + buttonHeight) {
-        // Return to the previous state
-        // If we're in the shop and the character is dead, go to game over
-        if (this.character.health <= 0) {
-          this.state = 'gameOver';
-        }
-        // If we're in the shop and the character is alive, go back to playing
-        else if (this.character.health > 0 && this.state === 'shop') {
-          this.state = 'playing';
-        }
-        // Otherwise, go back to welcome screen (this covers the case when entering shop from welcome)
-        else {
-          this.state = 'welcome';
-          // Hiển thị header khi trở về welcome screen
-          this.toggleHeader(true);
-        }
-        return;
-      }
-      
-      // Check equipment items
-      const equipmentClicked = this.checkEquipmentClick(x, y);
-      if (equipmentClicked !== -1) {
-        this.purchaseEquipment(equipmentClicked);
-        return;
-      }
-      
-      // Check skill items
-      const skillClicked = this.checkSkillClick(x, y);
-      if (skillClicked !== -1) {
-        this.purchaseSkill(skillClicked);
-        return;
-      }
-    }
-    
-    // Check if an equipment item was clicked
-    checkEquipmentClick(x, y) {
-      const equipmentTypes = ['sword', 'shield', 'boots', 'amulet'];
-      const itemWidth = 150;
-      const itemHeight = 100;
-      const itemSpacing = 20;
-      const startX = (this.width - (equipmentTypes.length * itemWidth + (equipmentTypes.length - 1) * itemSpacing)) / 2;
-      const startY = 180;
-      
-      for (let i = 0; i < equipmentTypes.length; i++) {
-        const itemX = startX + i * (itemWidth + itemSpacing);
-        const itemY = startY;
-        
-        // Check if click is within item bounds
-        if (x >= itemX && x <= itemX + itemWidth && y >= itemY && y <= itemY + itemHeight) {
-          return i;
-        }
-      }
-      
-      return -1; // No equipment item clicked
-    }
-    
-    // Check if a skill item was clicked
-    checkSkillClick(x, y) {
-      const availableSkills = this.character.getAvailableSkills();
-      const skillWidth = 200;
-      const skillHeight = 80;
-      const skillSpacing = 15;
-      const skillStartX = (this.width - (Math.min(3, availableSkills.length) * skillWidth + (Math.min(3, availableSkills.length) - 1) * skillSpacing)) / 2;
-      const skillStartY = 180 + 100 + 50; // Equipment items height + spacing
-      
-      for (let i = 0; i < availableSkills.length; i++) {
-        const col = i % 3;
-        const row = Math.floor(i / 3);
-        const skillX = skillStartX + col * (skillWidth + skillSpacing);
-        const skillY = skillStartY + row * (skillHeight + skillSpacing);
-        
-        // Check if click is within skill bounds
-        if (x >= skillX && x <= skillX + skillWidth && y >= skillY && y <= skillY + skillHeight) {
-          return i;
-        }
-      }
-      
-      return -1; // No skill item clicked
-    }
+    // The duplicate handleShopClick method has been removed
+  
   
   applyLevelUpChoice() {
     switch(this.levelUpChoice) {
@@ -522,6 +688,7 @@ class Game {
       dy *= 0.7071;
     }
     
+    // Move the character (this also updates animation direction)
     this.character.move(dx, dy);
     
     // Keep character within MAP bounds (not just screen bounds)
@@ -1694,7 +1861,7 @@ class Game {
       this.ctx.strokeRect(startNewButtonX, buttonY, buttonWidth, buttonHeight);
       this.ctx.fillStyle = 'white';
       this.ctx.font = '16px Arial';
-      this.ctx.fillText('Start New', startNewButtonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 5);
+      this.ctx.fillText('Back', startNewButtonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 5);
     } else {
       // Show chest selection prompt
       this.ctx.font = '24px Arial';
@@ -1901,12 +2068,13 @@ class Game {
     
     // Shop title
     this.ctx.fillStyle = 'white';
-    this.ctx.font = '40px Arial';
+    this.ctx.font = 'bold 40px Arial';
     this.ctx.textAlign = 'center';
     this.ctx.fillText('SHOP', this.width / 2, 60);
     
     // Player gold
     this.ctx.font = '20px Arial';
+    this.ctx.fillStyle = '#f1c40f';
     this.ctx.fillText(`Gold: ${this.character.gold}`, this.width / 2, 100);
     
     // Shop tabs
@@ -1917,143 +2085,72 @@ class Game {
     const skillsTabX = (this.width / 2) + 10;
     
     // Equipment tab
-    this.ctx.fillStyle = '#3498db';
+    this.ctx.fillStyle = this.shopTab === 'equipment' ? '#3498db' : '#2c3e50';
     this.ctx.fillRect(equipmentTabX, tabY, tabWidth, tabHeight);
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
     this.ctx.strokeRect(equipmentTabX, tabY, tabWidth, tabHeight);
     this.ctx.fillStyle = 'white';
-    this.ctx.font = '20px Arial';
+    this.ctx.font = 'bold 20px Arial';
     this.ctx.fillText('Equipment', equipmentTabX + tabWidth / 2, tabY + tabHeight / 2 + 7);
     
     // Skills tab
-    this.ctx.fillStyle = '#9b59b6';
+    this.ctx.fillStyle = this.shopTab === 'skills' ? '#9b59b6' : '#2c3e50';
     this.ctx.fillRect(skillsTabX, tabY, tabWidth, tabHeight);
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
     this.ctx.strokeRect(skillsTabX, tabY, tabWidth, tabHeight);
     this.ctx.fillStyle = 'white';
-    this.ctx.font = '20px Arial';
+    this.ctx.font = 'bold 20px Arial';
     this.ctx.fillText('Skills', skillsTabX + tabWidth / 2, tabY + tabHeight / 2 + 7);
     
-    // Available equipment
-    const equipmentTypes = ['sword', 'shield', 'boots', 'amulet'];
-    const itemWidth = 150;
-    const itemHeight = 100;
-    const itemSpacing = 20;
-    const startX = (this.width - (equipmentTypes.length * itemWidth + (equipmentTypes.length - 1) * itemSpacing)) / 2;
-    const startY = 180;
+    // Content area with scroll support
+    const contentAreaY = tabY + tabHeight + 20;
+    const contentAreaHeight = this.height - contentAreaY - 120; // Leave space for back button
     
-    this.ctx.font = '16px Arial';
-    this.ctx.textAlign = 'left';
+    // Set clipping region for scrollable content
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.rect(20, contentAreaY, this.width - 40, contentAreaHeight);
+    this.ctx.clip();
     
-    for (let i = 0; i < equipmentTypes.length; i++) {
-      const x = startX + i * (itemWidth + itemSpacing);
-      const y = startY;
-      
-      // Item background
-      this.ctx.fillStyle = '#333';
-      this.ctx.fillRect(x, y, itemWidth, itemHeight);
-      
-      // Item border
-      this.ctx.strokeStyle = '#555';
-      this.ctx.lineWidth = 2;
-      this.ctx.strokeRect(x, y, itemWidth, itemHeight);
-      
-      // Check if player already has this type of equipment
-      const existingEquipment = this.character.inventory.find(item => item.type === equipmentTypes[i]);
-      
-      if (existingEquipment) {
-        // Show upgrade info
-        this.ctx.fillStyle = 'white';
-        this.ctx.fillText(existingEquipment.icon, x + 10, y + 30);
-        this.ctx.fillText(`${existingEquipment.name} (Lvl ${existingEquipment.level})`, x + 40, y + 30);
-        
-        // Item description
-        this.ctx.font = '14px Arial';
-        this.ctx.fillText(existingEquipment.getDescription(), x + 10, y + 55);
-        
-        // Upgrade cost
-        const upgradeCost = existingEquipment.getUpgradeCost();
-        this.ctx.fillText(`Upgrade: ${upgradeCost} gold`, x + 10, y + 80);
-        
-        // Item index for purchase
-        this.ctx.fillText(`Press ${i + 1} to upgrade`, x + 10, y + 95);
-      } else {
-        // Show purchase info
-        const equipment = new Equipment(equipmentTypes[i], 1);
-        
-        // Item icon and name
-        this.ctx.fillStyle = 'white';
-        this.ctx.fillText(equipment.icon, x + 10, y + 30);
-        this.ctx.fillText(equipment.name, x + 40, y + 30);
-        
-        // Item description
-        this.ctx.font = '14px Arial';
-        this.ctx.fillText(equipment.getDescription(), x + 10, y + 55);
-        
-        // Item cost
-        this.ctx.fillText(`Cost: ${equipment.cost} gold`, x + 10, y + 80);
-        
-        // Item index for purchase
-        this.ctx.fillText(`Press ${i + 1} to buy`, x + 10, y + 95);
-      }
-      
-      // Reset font for next item
-      this.ctx.font = '16px Arial';
+    // Apply scroll offset
+    const scrollOffset = this.shopScrollOffset || 0;
+    this.ctx.translate(0, -scrollOffset);
+    
+    // Render appropriate content based on selected tab
+    if (this.shopTab === 'skills') {
+      this.renderShopSkills(contentAreaY, contentAreaHeight);
+    } else {
+      this.renderShopEquipment(contentAreaY, contentAreaHeight);
     }
     
-    // Available skills
-    const availableSkills = this.character.getAvailableSkills();
-    const skillWidth = 200;
-    const skillHeight = 80;
-    const skillSpacing = 15;
-    const skillStartX = (this.width - (Math.min(3, availableSkills.length) * skillWidth + (Math.min(3, availableSkills.length) - 1) * skillSpacing)) / 2;
-    const skillStartY = startY + itemHeight + 50;
+    // Restore context (remove clipping and translation)
+    this.ctx.restore();
     
-    this.ctx.font = '14px Arial';
+    // Scrollbar (if needed)
+    const contentHeight = this.shopTab === 'skills' ? 
+      Math.ceil(this.character.getAvailableSkills().length / 2) * 120 : 
+      Math.ceil(4 / 2) * 120; // Height of items with spacing
     
-    for (let i = 0; i < availableSkills.length; i++) {
-      const x = skillStartX + (i % 3) * (skillWidth + skillSpacing);
-      const y = skillStartY + Math.floor(i / 3) * (skillHeight + skillSpacing);
+    if (contentHeight > contentAreaHeight) {
+      const scrollbarHeight = (contentAreaHeight / contentHeight) * contentAreaHeight;
+      const scrollbarY = contentAreaY + (scrollOffset / contentHeight) * contentAreaHeight;
       
-      const skill = availableSkills[i];
+      // Draw scrollbar track
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      this.ctx.fillRect(this.width - 15, contentAreaY, 10, contentAreaHeight);
       
-      // Skill background
-      this.ctx.fillStyle = '#333';
-      this.ctx.fillRect(x, y, skillWidth, skillHeight);
-      
-      // Skill border
-      this.ctx.strokeStyle = '#555';
-      this.ctx.lineWidth = 2;
-      this.ctx.strokeRect(x, y, skillWidth, skillHeight);
-      
-      // Skill name and level
-      this.ctx.fillStyle = 'white';
-      this.ctx.font = '16px Arial';
-      this.ctx.fillText(`${skill.name} (Lvl ${skill.currentLevel}/${skill.levels})`, x + 10, y + 20);
-      
-      // Skill description
-      this.ctx.font = '12px Arial';
-      this.ctx.fillText(skill.getDescription(), x + 10, y + 40);
-      
-      // Skill cost or cooldown
-      if (skill.canUpgrade()) {
-        const upgradeCost = skill.getUpgradeCost();
-        this.ctx.fillText(`Upgrade: ${upgradeCost} gold`, x + 10, y + 60);
-        this.ctx.fillText(`Press ${i + 5} to upgrade`, x + 10, y + 75);
-      } else if (skill.currentLevel > 0) {
-        this.ctx.fillText('Max level reached', x + 10, y + 60);
-      } else {
-        this.ctx.fillText(`Unlock at level ${skill.unlockLevel}`, x + 10, y + 60);
-      }
+      // Draw scrollbar thumb
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      this.ctx.fillRect(this.width - 15, scrollbarY, 10, scrollbarHeight);
     }
     
     // Back button
     const buttonWidth = 150;
     const buttonHeight = 40;
     const buttonX = this.width / 2 - buttonWidth / 2;
-    const buttonY = this.height - 100;
+    const buttonY = this.height - 70;
     
     // Draw back button
     this.ctx.fillStyle = '#f1c40f'; // Yellow color for back button
@@ -2062,15 +2159,310 @@ class Game {
     this.ctx.lineWidth = 2;
     this.ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
     this.ctx.fillStyle = '#2c3e50'; // Dark color for text
-    this.ctx.font = '18px Arial';
+    this.ctx.font = 'bold 18px Arial';
     this.ctx.textAlign = 'center';
     this.ctx.fillText('Back', this.width / 2, buttonY + buttonHeight / 2 + 6);
     
-    // Exit instructions
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('Click items to purchase or use keys 1-9', this.width / 2, this.height - 50);
+    // Bottom instructions
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    this.ctx.font = '14px Arial';
+    this.ctx.fillText('Use mouse wheel to scroll', this.width / 2, this.height - 20);
+    this.ctx.fillText('Press 1 for Equipment, 2 for Skills', this.width / 2, this.height - 40);
   }
   
+  // New method to render equipment items
+  renderShopEquipment(startY, maxHeight) {
+    const equipmentTypes = ['sword', 'shield', 'boots', 'amulet'];
+    const itemWidth = 350;
+    const itemHeight = 100;
+    const itemSpacing = 20;
+    const columns = 2;
+    const columnWidth = itemWidth + itemSpacing;
+    const startX = (this.width - (columns * columnWidth - itemSpacing)) / 2;
+    
+    this.ctx.font = '16px Arial';
+    this.ctx.textAlign = 'left';
+    
+    for (let i = 0; i < equipmentTypes.length; i++) {
+      const col = i % columns;
+      const row = Math.floor(i / columns);
+      const x = startX + col * columnWidth;
+      const y = startY + row * (itemHeight + itemSpacing);
+      
+      // Item background
+      this.ctx.fillStyle = '#2c3e50';
+      this.ctx.fillRect(x, y, itemWidth, itemHeight);
+      
+      // Item border
+      this.ctx.strokeStyle = '#34495e';
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeRect(x, y, itemWidth, itemHeight);
+      
+      // Check if player already has this type of equipment
+      const existingEquipment = this.character.inventory.find(item => item.type === equipmentTypes[i]);
+      
+      // Left side: equipment icon
+      try {
+        const equipIcon = ImageCache.getImage(`assets/equipment/${equipmentTypes[i]}.png`);
+        if (equipIcon && equipIcon.complete && equipIcon.naturalWidth !== 0) {
+          this.ctx.drawImage(equipIcon, x + 10, y + 10, 50, 50);
+        } else {
+          // Fallback icon
+          this.ctx.fillStyle = '#3498db';
+          this.ctx.fillRect(x + 10, y + 10, 50, 50);
+        }
+      } catch (e) {
+        // Fallback icon
+        this.ctx.fillStyle = '#3498db';
+        this.ctx.fillRect(x + 10, y + 10, 50, 50);
+      }
+      
+      // Right side: equipment details
+      if (existingEquipment) {
+        // Equipment name and level
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = 'bold 18px Arial';
+        this.ctx.fillText(`${existingEquipment.name} (Lvl ${existingEquipment.level})`, x + 70, y + 25);
+        
+        // Equipment description
+        this.ctx.font = '14px Arial';
+        this.ctx.fillStyle = '#bdc3c7';
+        this.ctx.fillText(existingEquipment.getDescription(), x + 70, y + 50);
+        
+        // Upgrade button or MAX level indicator
+        if (existingEquipment.level < 10) { // Assuming max level is 10
+          // Upgrade cost
+          const upgradeCost = existingEquipment.getUpgradeCost();
+          this.ctx.fillStyle = '#bdc3c7';
+          this.ctx.fillText(`Upgrade: ${upgradeCost} gold`, x + 70, y + 75);
+          
+          // Upgrade button
+          const buttonWidth = 80;
+          const buttonHeight = 28;
+          const buttonX = x + itemWidth - buttonWidth - 10;
+          const buttonY = y + itemHeight - buttonHeight - 10;
+          
+          // Draw button background
+          if (this.character.gold >= upgradeCost) {
+            this.ctx.fillStyle = '#27ae60'; // Green if can afford
+          } else {
+            this.ctx.fillStyle = '#7f8c8d'; // Gray if cannot afford
+          }
+          
+          this.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+          this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+          this.ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+          
+          // Button text
+          this.ctx.fillStyle = 'white';
+          this.ctx.font = 'bold 14px Arial';
+          this.ctx.textAlign = 'center';
+          this.ctx.fillText('UPGRADE', buttonX + buttonWidth/2, buttonY + buttonHeight/2 + 5);
+          this.ctx.textAlign = 'left';
+        } else {
+          // MAX level indicator
+          this.ctx.fillStyle = '#f39c12';
+          this.ctx.font = 'bold 16px Arial';
+          this.ctx.fillText('MAX LEVEL', x + itemWidth - 100, y + 75);
+        }
+      } else {
+        // Show purchase info for new equipment
+        const equipment = new Equipment(equipmentTypes[i], 1);
+        
+        // Equipment name
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = 'bold 18px Arial';
+        this.ctx.fillText(equipment.name, x + 70, y + 25);
+        
+        // Equipment description
+        this.ctx.font = '14px Arial';
+        this.ctx.fillStyle = '#bdc3c7';
+        this.ctx.fillText(equipment.getDescription(), x + 70, y + 50);
+        
+        // Purchase cost
+        this.ctx.fillStyle = '#bdc3c7';
+        this.ctx.fillText(`Cost: ${equipment.cost} gold`, x + 70, y + 75);
+        
+        // Buy button
+        const buttonWidth = 80;
+        const buttonHeight = 28;
+        const buttonX = x + itemWidth - buttonWidth - 10;
+        const buttonY = y + itemHeight - buttonHeight - 10;
+        
+        // Draw button background
+        if (this.character.gold >= equipment.cost) {
+          this.ctx.fillStyle = '#27ae60'; // Green if can afford
+        } else {
+          this.ctx.fillStyle = '#7f8c8d'; // Gray if cannot afford
+        }
+        
+        this.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        
+        // Button text
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('BUY', buttonX + buttonWidth/2, buttonY + buttonHeight/2 + 5);
+        this.ctx.textAlign = 'left';
+      }
+    }
+  }
+
+  // New method to render skill items
+  renderShopSkills(startY, maxHeight) {
+    const availableSkills = this.character.getAvailableSkills();
+    const skillWidth = 350;
+    const skillHeight = 100;
+    const skillSpacing = 20;
+    const columns = 2;
+    const columnWidth = skillWidth + skillSpacing;
+    const startX = (this.width - (columns * columnWidth - skillSpacing)) / 2;
+    
+    this.ctx.textAlign = 'left';
+    
+    for (let i = 0; i < availableSkills.length; i++) {
+      const col = i % columns;
+      const row = Math.floor(i / columns);
+      const x = startX + col * columnWidth;
+      const y = startY + row * (skillHeight + skillSpacing);
+      
+      const skill = availableSkills[i];
+      
+      // Skill background
+      this.ctx.fillStyle = '#2c3e50';
+      this.ctx.fillRect(x, y, skillWidth, skillHeight);
+      
+      // Skill border
+      this.ctx.strokeStyle = '#34495e';
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeRect(x, y, skillWidth, skillHeight);
+      
+      // Left side: Skill icon
+      const cacheKey = `skill_${skill.name.toLowerCase().replace(' ', '_')}`;
+      try {
+        // Try to get image from cache or load it
+        let skillImage;
+        if (this.imageCache && this.imageCache.has(cacheKey)) {
+          skillImage = this.imageCache.get(cacheKey);
+        } else {
+          skillImage = ImageCache.getImage(`assets/skills/${skill.name.toLowerCase().replace(' ', '_')}.png`);
+        }
+        
+        if (skillImage && skillImage.complete && skillImage.naturalWidth !== 0) {
+          this.ctx.drawImage(skillImage, x + 10, y + 10, 50, 50);
+        } else {
+          // Fallback icon
+          this.ctx.fillStyle = '#9b59b6';
+          this.ctx.fillRect(x + 10, y + 10, 50, 50);
+        }
+      } catch (e) {
+        // Fallback icon
+        this.ctx.fillStyle = '#9b59b6';
+        this.ctx.fillRect(x + 10, y + 10, 50, 50);
+      }
+      
+      // Right side: Skill details
+      // Skill name and level
+      this.ctx.fillStyle = 'white';
+      this.ctx.font = 'bold 18px Arial';
+      this.ctx.fillText(`${skill.name} (Lvl ${skill.currentLevel}/${skill.levels})`, x + 70, y + 25);
+      
+      // Skill description
+      this.ctx.font = '14px Arial';
+      this.ctx.fillStyle = '#bdc3c7';
+      this.ctx.fillText(skill.getDescription(), x + 70, y + 50);
+      
+      // Check if player level meets requirement
+      if (this.character.level < skill.unlockLevel) {
+        // Locked skill
+        this.ctx.fillStyle = '#e74c3c';
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.fillText(`Unlocks at Level ${skill.unlockLevel}`, x + 70, y + 75);
+        
+        // Add lock icon overlay
+        this.ctx.fillStyle = 'rgba(231, 76, 60, 0.5)';
+        this.ctx.fillRect(x, y, skillWidth, skillHeight);
+        
+        this.ctx.font = 'bold 24px Arial';
+        this.ctx.fillStyle = 'white';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('LOCKED', x + skillWidth/2, y + skillHeight/2 + 8);
+        this.ctx.textAlign = 'left';
+      } 
+      // Can upgrade or max level
+      else if (skill.currentLevel > 0) {
+        if (skill.canUpgrade()) {
+          // Upgrade cost
+          const upgradeCost = skill.getUpgradeCost();
+          this.ctx.fillStyle = '#bdc3c7';
+          this.ctx.fillText(`Upgrade: ${upgradeCost} gold`, x + 70, y + 75);
+          
+          // Upgrade button
+          const buttonWidth = 80;
+          const buttonHeight = 28;
+          const buttonX = x + skillWidth - buttonWidth - 10;
+          const buttonY = y + skillHeight - buttonHeight - 10;
+          
+          // Draw button background
+          if (this.character.gold >= upgradeCost) {
+            this.ctx.fillStyle = '#27ae60'; // Green if can afford
+          } else {
+            this.ctx.fillStyle = '#7f8c8d'; // Gray if cannot afford
+          }
+          
+          this.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+          this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+          this.ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+          
+          // Button text
+          this.ctx.fillStyle = 'white';
+          this.ctx.font = 'bold 14px Arial';
+          this.ctx.textAlign = 'center';
+          this.ctx.fillText('UPGRADE', buttonX + buttonWidth/2, buttonY + buttonHeight/2 + 5);
+          this.ctx.textAlign = 'left';
+        } else {
+          // MAX level indicator
+          this.ctx.fillStyle = '#f39c12';
+          this.ctx.font = 'bold 16px Arial';
+          this.ctx.fillText('MAX LEVEL', x + skillWidth - 100, y + 75);
+        }
+      } 
+      // Can purchase for the first time
+      else {
+        // Purchase cost
+        const purchaseCost = skill.costPerLevel;
+        this.ctx.fillStyle = '#bdc3c7';
+        this.ctx.fillText(`Cost: ${purchaseCost} gold`, x + 70, y + 75);
+        
+        // Buy button
+        const buttonWidth = 80;
+        const buttonHeight = 28;
+        const buttonX = x + skillWidth - buttonWidth - 10;
+        const buttonY = y + skillHeight - buttonHeight - 10;
+        
+        // Draw button background
+        if (this.character.gold >= purchaseCost) {
+          this.ctx.fillStyle = '#27ae60'; // Green if can afford
+        } else {
+          this.ctx.fillStyle = '#7f8c8d'; // Gray if cannot afford
+        }
+        
+        this.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        
+        // Button text
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('BUY', buttonX + buttonWidth/2, buttonY + buttonHeight/2 + 5);
+        this.ctx.textAlign = 'left';
+      }
+    }
+  }
+
   startGame() {
     this.state = 'playing';
     this.score = 0;
@@ -2667,90 +3059,7 @@ class Game {
     }
   }
   
-  purchaseEquipment(index) {
-    const equipmentTypes = ['sword', 'shield', 'boots', 'amulet'];
-    if (index < 0 || index >= equipmentTypes.length) return;
-    
-    const equipmentType = equipmentTypes[index];
-    
-    // Check if player already has this type of equipment
-    const existingEquipment = this.character.inventory.find(item => item.type === equipmentType);
-    
-    if (existingEquipment) {
-      // Upgrade existing equipment
-      const upgradeCost = existingEquipment.getUpgradeCost();
-      if (this.character.gold >= upgradeCost) {
-        // Deduct gold
-        this.character.gold -= upgradeCost;
-        
-        // Upgrade equipment
-        existingEquipment.upgrade();
-        
-        // Apply upgrade bonus
-        this.character.applyEquipmentBonus(existingEquipment);
-        
-        // Show purchase confirmation
-        console.log(`Upgraded ${existingEquipment.name} for ${upgradeCost} gold`);
-        // Play purchase sound
-        this.soundManager.playSound('purchase');
-        
-        // Update welcome screen info
-        if (this.state === 'welcome' || this.state === 'shop') {
-          this.updateWelcomeScreenInfo();
-        }
-      }
-    } else {
-      // Purchase new equipment
-      const equipment = new Equipment(equipmentType, 1);
-      
-      // Check if player has enough gold
-      if (this.character.gold >= equipment.cost) {
-        // Deduct gold
-        this.character.gold -= equipment.cost;
-        
-        // Add equipment to inventory
-        this.character.addEquipment(equipment);
-        
-        // Show purchase confirmation
-        console.log(`Purchased ${equipment.name} for ${equipment.cost} gold`);
-        // Play purchase sound
-        this.soundManager.playSound('purchase');
-        
-        // Update welcome screen info
-        if (this.state === 'welcome' || this.state === 'shop') {
-          this.updateWelcomeScreenInfo();
-        }
-      }
-    }
-  }
-  
-  purchaseSkill(index) {
-    // Get available skills
-    const availableSkills = this.character.getAvailableSkills();
-    
-    if (index < 0 || index >= availableSkills.length) return;
-    
-    const skill = availableSkills[index];
-    
-    // Check if skill can be upgraded
-    if (skill.canUpgrade() && this.character.gold >= skill.getUpgradeCost()) {
-      // Deduct gold
-      this.character.gold -= skill.getUpgradeCost();
-      
-      // Upgrade skill
-      skill.upgrade();
-      
-      // Show purchase confirmation
-      console.log(`Upgraded ${skill.name} for ${skill.getUpgradeCost()} gold`);
-      // Play purchase sound
-      this.soundManager.playSound('purchase');
-      
-      // Update welcome screen info
-      if (this.state === 'welcome' || this.state === 'shop') {
-        this.updateWelcomeScreenInfo();
-      }
-    }
-  }
+
 }
 
 export default Game;
