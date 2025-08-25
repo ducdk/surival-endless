@@ -316,7 +316,7 @@ class Character {
       
       // Create multiple bullets with spread
       // Get bullet count from Bullet Storm skill
-      let bulletCount = 3; // Default bullet count
+      let bulletCount = 1; // Default bullet count
       const bulletStormSkill = this.getSkill('Bullet Storm');
       if (bulletStormSkill && bulletStormSkill.currentLevel > 0) {
         bulletCount = bulletStormSkill.getEffectValue();
