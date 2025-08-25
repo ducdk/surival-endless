@@ -127,13 +127,13 @@ class Character {
     this.updateBullets(deltaTime);
   }
 
-  render(ctx) {
+  render(ctx, screenX, screenY) {
     // Render character image if loaded, otherwise render colored rectangle
     if (this.image && this.image.complete) {
-      ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+      ctx.drawImage(this.image, screenX, screenY, this.width, this.height);
     } else {
       ctx.fillStyle = '#3498db';
-      ctx.fillRect(this.x, this.y, this.width, this.height);
+      ctx.fillRect(screenX, screenY, this.width, this.height);
     }
     
     // Render whirlwind balls if skill is unlocked
@@ -143,8 +143,8 @@ class Character {
       for (const ball of this.whirlwindBalls) {
         ctx.beginPath();
         ctx.arc(
-          this.x + this.width / 2 + ball.x,
-          this.y + this.height / 2 + ball.y,
+          screenX + this.width / 2 + ball.x,
+          screenY + this.height / 2 + ball.y,
           5, // ball radius
           0,
           Math.PI * 2
@@ -155,12 +155,27 @@ class Character {
     
     // Render health bar
     ctx.fillStyle = '#e74c3c';
-    ctx.fillRect(this.x, this.y - 10, this.width, 5);
+    ctx.fillRect(screenX, screenY - 10, this.width, 5);
     ctx.fillStyle = '#2ecc71';
-    ctx.fillRect(this.x, this.y - 10, (this.health / this.maxHealth) * this.width, 5);
+    ctx.fillRect(screenX, screenY - 10, (this.health / this.maxHealth) * this.width, 5);
     
     // Render bullets
-    this.renderBullets(ctx);
+    this.renderBulletsWithCamera(ctx);
+  }
+  
+  // New method to render bullets with camera adjustment
+  renderBulletsWithCamera(ctx) {
+    for (const bullet of this.bullets) {
+      // Convert bullet position to screen coordinates
+      const screenPos = this.game.worldToScreen(bullet.x, bullet.y);
+      
+      // Mở rộng phạm vi hiển thị đạn để đạn hiện được ở ngoài viewport
+      const viewportBuffer = 200; // Buffer lớn hơn để đạn hiển thị rõ hơn
+      if (screenPos.x >= -viewportBuffer && screenPos.x <= this.game.width + viewportBuffer &&
+          screenPos.y >= -viewportBuffer && screenPos.y <= this.game.height + viewportBuffer) {
+        bullet.renderAtPosition(ctx, screenPos.x, screenPos.y);
+      }
+    }
   }
 
   takeDamage(damage) {
@@ -252,7 +267,7 @@ class Character {
       }
       const spreadAngle = 0.4; // Spread angle in radians
       
-      // Calculate the angle to the target
+      // Calculate the angle to the target using world coordinates
       const centerX = this.x + this.width / 2;
       const centerY = this.y + this.height / 2;
       const dx = targetX - centerX;
@@ -265,8 +280,8 @@ class Character {
         const angleOffset = (i - (bulletCount - 1) / 2) * spreadAngle;
         const bulletAngle = targetAngle + angleOffset;
         
-        // Calculate target position with spread
-        const spreadDistance = 500; // Distance to calculate spread target
+        // Calculate target position with spread using world coordinates
+        const spreadDistance = 1000; // Increase distance for better targeting
         const spreadTargetX = centerX + Math.cos(bulletAngle) * spreadDistance;
         const spreadTargetY = centerY + Math.sin(bulletAngle) * spreadDistance;
         
@@ -298,10 +313,10 @@ class Character {
       const bullet = this.bullets[i];
       bullet.update(deltaTime);
       
-      // Remove bullets that have expired or gone off-screen
+      // Remove bullets that have expired or gone off-map
       if (!bullet.isAlive() ||
-          bullet.x < -100 || bullet.x > this.game.width + 100 ||
-          bullet.y < -100 || bullet.y > this.game.height + 100) {
+          bullet.x < -100 || bullet.x > this.game.mapWidth + 100 ||
+          bullet.y < -100 || bullet.y > this.game.mapHeight + 100) {
         this.bullets.splice(i, 1);
       }
     }

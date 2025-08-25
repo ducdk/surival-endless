@@ -40,12 +40,18 @@ class Bullet {
     this.life -= deltaTime;
   }
   
+  // Original render method for backward compatibility
   render(ctx) {
+    this.renderAtPosition(ctx, this.x, this.y);
+  }
+  
+  // New method to render at specific screen position
+  renderAtPosition(ctx, screenX, screenY) {
     // Render bullet image with rotation
     if (this.image && this.image.complete) {
       ctx.save();
-      // Translate to the center of the bullet
-      ctx.translate(this.x, this.y);
+      // Translate to the center of the bullet at screen coordinates
+      ctx.translate(screenX, screenY);
       // Rotate the context
       ctx.rotate(this.angle);
       // Draw the image centered on the bullet position
@@ -55,7 +61,7 @@ class Bullet {
       // Fallback to circle if image is not loaded
       ctx.fillStyle = this.color;
       ctx.beginPath();
-      ctx.arc(this.x, this.y, this.width / 2, 0, Math.PI * 2);
+      ctx.arc(screenX, screenY, this.width / 2, 0, Math.PI * 2);
       ctx.fill();
     }
   }

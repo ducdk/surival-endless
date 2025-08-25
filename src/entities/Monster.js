@@ -9,6 +9,7 @@ class Monster {
     this.type = type;
     this.width = 30;
     this.height = 30;
+    this.game = null; // Will be set by the game instance
     
     // Set properties based on monster type and scale with difficulty
     switch (type) {
@@ -173,23 +174,25 @@ class Monster {
     }
   }
 
-  render(ctx) {
+  render(ctx, screenX, screenY) {
     // Render monster image if loaded, otherwise render colored rectangle
     if (this.image && this.image.complete) {
-      ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+      ctx.drawImage(this.image, screenX, screenY, this.width, this.height);
     } else {
       ctx.fillStyle = this.color;
-      ctx.fillRect(this.x, this.y, this.width, this.height);
+      ctx.fillRect(screenX, screenY, this.width, this.height);
     }
     
     // Render health bar
     ctx.fillStyle = '#e74c3c';
-    ctx.fillRect(this.x, this.y - 8, this.width, 3);
+    ctx.fillRect(screenX, screenY - 8, this.width, 3);
     ctx.fillStyle = '#2ecc71';
-    ctx.fillRect(this.x, this.y - 8, (this.health / this.maxHealth) * this.width, 3);
+    ctx.fillRect(screenX, screenY - 8, (this.health / this.maxHealth) * this.width, 3);
     
     // Render bullets (only for ranged monsters)
-    this.renderBullets(ctx);
+    if (this.type === 'ranged' && this.bullets) {
+      this.renderBulletsWithCamera(ctx);
+    }
   }
 
   takeDamage(damage) {
@@ -233,10 +236,13 @@ class Monster {
       const bullet = this.bullets[i];
       bullet.update(deltaTime);
       
-      // Remove bullets that have expired or gone off-screen
+      // Remove bullets that have expired or gone off-map
+      const mapWidth = this.game ? this.game.mapWidth : 5000;
+      const mapHeight = this.game ? this.game.mapHeight : 5000;
+      
       if (!bullet.isAlive() ||
-          bullet.x < -100 || bullet.x > 2000 ||
-          bullet.y < -100 || bullet.y > 2000) {
+          bullet.x < -100 || bullet.x > mapWidth + 100 ||
+          bullet.y < -100 || bullet.y > mapHeight + 100) {
         this.bullets.splice(i, 1);
       }
     }
@@ -248,6 +254,23 @@ class Monster {
     
     for (const bullet of this.bullets) {
       bullet.render(ctx);
+    }
+  }
+  
+  // New method to render bullets with camera adjustment
+  renderBulletsWithCamera(ctx) {
+    if (this.type !== 'ranged' || !this.bullets) return;
+    
+    for (const bullet of this.bullets) {
+      // Convert bullet position to screen coordinates
+      const screenPos = this.game ? this.game.worldToScreen(bullet.x, bullet.y) : { x: bullet.x, y: bullet.y };
+      
+      // Mở rộng phạm vi hiển thị đạn để đạn hiện được ở ngoài viewport
+      const viewportBuffer = 200; // Buffer lớn hơn để đạn hiển thị rõ hơn
+      if (screenPos.x >= -viewportBuffer && screenPos.x <= this.game.width + viewportBuffer &&
+          screenPos.y >= -viewportBuffer && screenPos.y <= this.game.height + viewportBuffer) {
+        bullet.renderAtPosition(ctx, screenPos.x, screenPos.y);
+      }
     }
   }
   

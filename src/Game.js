@@ -13,6 +13,18 @@ class Game {
     this.width = canvas.width;
     this.height = canvas.height;
     
+    // Map size (much larger than viewport)
+    this.mapWidth = 5000;
+    this.mapHeight = 5000;
+    
+    // Camera position (top-left corner of the viewport)
+    this.camera = {
+      x: 0,
+      y: 0,
+      width: this.width,
+      height: this.height
+    };
+    
     // User data
     this.username = localStorage.getItem('endlessSurvivalUsername') || '';
     
@@ -35,7 +47,7 @@ class Game {
     this.chestRewards = null; // Store rewards from selected chest
     
     // Entities
-    this.character = new Character(this.width / 2, this.height / 2, this);
+    this.character = new Character(this.mapWidth / 2, this.mapHeight / 2, this);
     this.monsters = [];
     this.resources = [];
     this.attackEffects = [];
@@ -512,12 +524,34 @@ class Game {
     
     this.character.move(dx, dy);
     
-    // Keep character within bounds
-    this.character.x = Math.max(0, Math.min(this.width - this.character.width, this.character.x));
-    this.character.y = Math.max(0, Math.min(this.height - this.character.height, this.character.y));
+    // Keep character within MAP bounds (not just screen bounds)
+    this.character.x = Math.max(0, Math.min(this.mapWidth - this.character.width, this.character.x));
+    this.character.y = Math.max(0, Math.min(this.mapHeight - this.character.height, this.character.y));
     
     // Update character
     this.character.update(deltaTime);
+    
+    // Update camera to follow the character
+    this.updateCamera();
+  }
+  
+  // Update the camera to follow the character
+  updateCamera() {
+    // Center the camera on the character
+    this.camera.x = this.character.x - this.width / 2 + this.character.width / 2;
+    this.camera.y = this.character.y - this.height / 2 + this.character.height / 2;
+    
+    // Keep the camera within map bounds
+    this.camera.x = Math.max(0, Math.min(this.mapWidth - this.width, this.camera.x));
+    this.camera.y = Math.max(0, Math.min(this.mapHeight - this.height, this.camera.y));
+  }
+  
+  // Convert world coordinates to screen coordinates
+  worldToScreen(x, y) {
+    return {
+      x: x - this.camera.x,
+      y: y - this.camera.y
+    };
   }
   
   updateMonsters(deltaTime) {
@@ -678,28 +712,33 @@ class Game {
     if (this.spawnTimer >= this.spawnInterval) {
       this.spawnTimer = 0;
       
-      // Determine spawn position (outside the screen)
+      // Determine spawn position (outside the viewport but within the map)
       let side = Math.floor(Math.random() * 4);
       let x, y;
+      const buffer = 50; // Buffer distance from viewport edge
       
       switch (side) {
         case 0: // top
-          x = Math.random() * this.width;
-          y = -30;
+          x = this.camera.x + Math.random() * this.width;
+          y = this.camera.y - buffer - Math.random() * 200; // Spawn above viewport
           break;
         case 1: // right
-          x = this.width + 30;
-          y = Math.random() * this.height;
+          x = this.camera.x + this.width + buffer + Math.random() * 200; // Spawn to right of viewport
+          y = this.camera.y + Math.random() * this.height;
           break;
         case 2: // bottom
-          x = Math.random() * this.width;
-          y = this.height + 30;
+          x = this.camera.x + Math.random() * this.width;
+          y = this.camera.y + this.height + buffer + Math.random() * 200; // Spawn below viewport
           break;
         case 3: // left
-          x = -30;
-          y = Math.random() * this.height;
+          x = this.camera.x - buffer - Math.random() * 200; // Spawn to left of viewport
+          y = this.camera.y + Math.random() * this.height;
           break;
       }
+      
+      // Ensure spawn position is within map bounds
+      x = Math.max(0, Math.min(this.mapWidth - 30, x));
+      y = Math.max(0, Math.min(this.mapHeight - 30, y));
       
       // Determine monster type based on game time and score
       let type = 'normal';
@@ -719,7 +758,9 @@ class Game {
         type = 'tanker';
       }
       
-      this.monsters.push(new Monster(x, y, type, monsterDifficulty));
+      const monster = new Monster(x, y, type, monsterDifficulty);
+      monster.game = this; // Set game reference
+      this.monsters.push(monster);
       
       // Decrease spawn interval as time passes (faster spawning)
       // Adjust spawn rate based on difficulty
@@ -909,8 +950,11 @@ class Game {
         }
       }
       
-      // If bullet didn't hit anything and is off-screen, remove it
-      if (!hit && (bullet.x < -100 || bullet.x > this.width + 100 || bullet.y < -100 || bullet.y > this.height + 100)) {
+      // If bullet didn't hit anything and is off the map (not just viewport), remove it
+      if (!hit && (
+        bullet.x < -100 || bullet.x > this.mapWidth + 100 || 
+        bullet.y < -100 || bullet.y > this.mapHeight + 100
+      )) {
         this.character.bullets.splice(i, 1);
       }
     }
@@ -992,59 +1036,161 @@ class Game {
   
   // Check if a bullet collides with an entity
   isCollidingWithBullet(entity, bullet) {
-    return entity.x < bullet.x + bullet.width &&
-           entity.x + entity.width > bullet.x &&
-           entity.y < bullet.y + bullet.height &&
-           entity.y + entity.height > bullet.y;
+    // Calculate center points
+    const entityCenterX = entity.x + entity.width / 2;
+    const entityCenterY = entity.y + entity.height / 2;
+    const bulletCenterX = bullet.x; // Bullet positions are already centered
+    const bulletCenterY = bullet.y;
+    
+    // Calculate distance between centers
+    const dx = entityCenterX - bulletCenterX;
+    const dy = entityCenterY - bulletCenterY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // Calculate collision radius (average of entity and bullet dimensions)
+    const collisionRadius = (entity.width + entity.height + bullet.width + bullet.height) / 4;
+    
+    // Return true if distance is less than collision radius (with a slight adjustment factor)
+    return distance < collisionRadius * 0.5;
   }
   
   // Check if an entity is within the viewport
   isInView(entity) {
     const buffer = 100; // Render entities slightly outside viewport
-    return entity.x + entity.width > -buffer &&
-           entity.x < this.width + buffer &&
-           entity.y + entity.height > -buffer &&
-           entity.y < this.height + buffer;
+    return entity.x + entity.width > this.camera.x - buffer &&
+           entity.x < this.camera.x + this.width + buffer &&
+           entity.y + entity.height > this.camera.y - buffer &&
+           entity.y < this.camera.y + this.height + buffer;
   }
   
   render() {
     // Clear canvas
     this.ctx.clearRect(0, 0, this.width, this.height);
     
+    // Draw background grid
+    this.renderBackground();
+    
+    // Save context before applying camera translation
+    this.ctx.save();
+    
     // Render resources (only those within viewport)
     for (const resource of this.resources) {
       if (this.isInView(resource)) {
-        resource.render(this.ctx);
+        const screenPos = this.worldToScreen(resource.x, resource.y);
+        resource.render(this.ctx, screenPos.x, screenPos.y);
       }
     }
     
     // Render monsters (only those within viewport)
     for (const monster of this.monsters) {
       if (this.isInView(monster)) {
-        monster.render(this.ctx);
+        const screenPos = this.worldToScreen(monster.x, monster.y);
+        monster.render(this.ctx, screenPos.x, screenPos.y);
       }
     }
     
-    // Render character
-    this.character.render(this.ctx);
+    // Render character (adjusted for camera)
+    const characterScreenPos = this.worldToScreen(this.character.x, this.character.y);
+    this.character.render(this.ctx, characterScreenPos.x, characterScreenPos.y);
     
-    // Render attack effects
+    // Restore context after world rendering
+    this.ctx.restore();
+    
+    // Render effects
     this.renderAttackEffects();
-    
-    // Render death effects
     this.renderDeathEffects();
-    
-    // Render collection effects
     this.renderCollectionEffects();
-    
-    // Render level-up effects
     this.renderLevelUpEffects();
-    
-    // Render healing effects
     this.renderHealingEffects();
+    
+    // Render minimap
+    this.renderMinimap();
     
     // Render UI
     this.renderUI();
+  }
+  
+  // Add a method to render background grid
+  renderBackground() {
+    const gridSize = 100;
+    const gridColor = 'rgba(80, 80, 80, 0.1)';
+    
+    // Calculate the visible grid cells
+    const startX = Math.floor(this.camera.x / gridSize) * gridSize;
+    const startY = Math.floor(this.camera.y / gridSize) * gridSize;
+    const endX = startX + this.width + gridSize;
+    const endY = startY + this.height + gridSize;
+    
+    // Draw vertical lines
+    this.ctx.strokeStyle = gridColor;
+    this.ctx.lineWidth = 1;
+    for (let x = startX; x <= endX; x += gridSize) {
+      const screenX = x - this.camera.x;
+      this.ctx.beginPath();
+      this.ctx.moveTo(screenX, 0);
+      this.ctx.lineTo(screenX, this.height);
+      this.ctx.stroke();
+    }
+    
+    // Draw horizontal lines
+    for (let y = startY; y <= endY; y += gridSize) {
+      const screenY = y - this.camera.y;
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, screenY);
+      this.ctx.lineTo(this.width, screenY);
+      this.ctx.stroke();
+    }
+  }
+  
+  // Render minimap in the bottom right corner
+  renderMinimap() {
+    const minimapSize = 150; // Size of the minimap
+    const minimapX = this.width - minimapSize - 10; // Position X (bottom right)
+    const minimapY = this.height - minimapSize - 10; // Position Y (bottom right)
+    const scale = minimapSize / this.mapWidth; // Scale factor for the minimap
+    
+    // Draw minimap background
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.ctx.fillRect(minimapX, minimapY, minimapSize, minimapSize);
+    
+    // Draw minimap border
+    this.ctx.strokeStyle = '#555';
+    this.ctx.lineWidth = 2;
+    this.ctx.strokeRect(minimapX, minimapY, minimapSize, minimapSize);
+    
+    // Draw character on minimap (white dot)
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.beginPath();
+    this.ctx.arc(
+      minimapX + this.character.x * scale,
+      minimapY + this.character.y * scale,
+      3, // Size of character dot
+      0, Math.PI * 2
+    );
+    this.ctx.fill();
+    
+    // Draw monsters on minimap (red dots)
+    this.ctx.fillStyle = '#e74c3c';
+    for (const monster of this.monsters) {
+      this.ctx.beginPath();
+      this.ctx.arc(
+        minimapX + monster.x * scale,
+        minimapY + monster.y * scale,
+        2, // Size of monster dots (smaller than character)
+        0, Math.PI * 2
+      );
+      this.ctx.fill();
+    }
+    
+    // Draw viewport rectangle
+    this.ctx.strokeStyle = '#2ecc71';
+    this.ctx.lineWidth = 1;
+    this.ctx.strokeRect(
+      minimapX + this.camera.x * scale,
+      minimapY + this.camera.y * scale,
+      this.width * scale,
+      this.height * scale
+    );
   }
   
   renderUI() {
@@ -1620,20 +1766,25 @@ class Game {
   renderAttackEffects() {
     for (const effect of this.attackEffects) {
       if (effect.startX !== undefined && effect.endX !== undefined) {
-        // Line effect (attack)
+        // Line effect (attack) - convert to screen coordinates
+        const startPos = this.worldToScreen(effect.startX, effect.startY);
+        const endPos = this.worldToScreen(effect.endX, effect.endY);
+        
         const alpha = effect.life / effect.maxLife;
         this.ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
-        this.ctx.moveTo(effect.startX, effect.startY);
-        this.ctx.lineTo(effect.endX, effect.endY);
+        this.ctx.moveTo(startPos.x, startPos.y);
+        this.ctx.lineTo(endPos.x, endPos.y);
         this.ctx.stroke();
       } else {
-        // Circle effect (hit)
+        // Circle effect (hit) - convert to screen coordinates
+        const screenPos = this.worldToScreen(effect.x, effect.y);
+        
         const alpha = effect.life / effect.maxLife;
         this.ctx.fillStyle = `${effect.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
         this.ctx.beginPath();
-        this.ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+        this.ctx.arc(screenPos.x, screenPos.y, effect.size, 0, Math.PI * 2);
         this.ctx.fill();
       }
     }
@@ -1641,33 +1792,42 @@ class Game {
   
   renderDeathEffects() {
     for (const effect of this.deathEffects) {
+      // Convert to screen coordinates
+      const screenPos = this.worldToScreen(effect.x, effect.y);
+      
       const alpha = effect.life / effect.maxLife;
       this.ctx.fillStyle = `rgba(${parseInt(effect.color.slice(1, 3), 16)}, ${parseInt(effect.color.slice(3, 5), 16)}, ${parseInt(effect.color.slice(5, 7), 16)}, ${alpha * 0.7})`;
       this.ctx.beginPath();
-      this.ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+      this.ctx.arc(screenPos.x, screenPos.y, effect.size, 0, Math.PI * 2);
       this.ctx.fill();
     }
   }
   
   renderCollectionEffects() {
     for (const effect of this.collectionEffects) {
+      // Convert to screen coordinates
+      const screenPos = this.worldToScreen(effect.x, effect.y);
+      
       this.ctx.fillStyle = `${effect.color}${Math.floor(effect.alpha * 255).toString(16).padStart(2, '0')}`;
       this.ctx.beginPath();
-      this.ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+      this.ctx.arc(screenPos.x, screenPos.y, effect.size, 0, Math.PI * 2);
       this.ctx.fill();
     }
   }
   
   renderLevelUpEffects() {
     for (const effect of this.levelUpEffects) {
+      // Convert to screen coordinates
+      const screenPos = this.worldToScreen(effect.x, effect.y);
+      
       this.ctx.fillStyle = `rgba(241, 196, 15, ${effect.alpha})`; // Gold color with alpha
       this.ctx.beginPath();
-      this.ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+      this.ctx.arc(screenPos.x, screenPos.y, effect.size, 0, Math.PI * 2);
       this.ctx.fill();
       
       // Add star shape for level up effect
       this.ctx.fillStyle = `rgba(255, 255, 255, ${effect.alpha * 0.8})`;
-      this.drawStar(effect.x, effect.y, 5, effect.size * 0.8, effect.size * 0.4);
+      this.drawStar(screenPos.x, screenPos.y, 5, effect.size * 0.8, effect.size * 0.4);
     }
   }
   
