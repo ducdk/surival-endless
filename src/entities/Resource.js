@@ -6,8 +6,8 @@ class Resource {
     this.x = x;
     this.y = y;
     this.type = type;
-    this.width = 20;
-    this.height = 20;
+    this.width = 16;
+    this.height = 16;
     this.icon = null;
     this.collected = false;
     
@@ -71,22 +71,26 @@ class Resource {
 
   render(ctx, screenX, screenY) {
     if (this.collected) return;
-    
-    // Check if we have a cached image for this resource type
-    // Try to get image from global cache
+
+    // Ưu tiên hiển thị icon nếu có
+    if (this.icon) {
+      ctx.font = `${this.width}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(this.icon, screenX + this.width / 2, screenY + this.height / 2);
+      return;
+    }
+
+    // Nếu không có icon, thử hiển thị image
     const image = ImageCache.getImage(`assets/resource/${this.type}.png`);
-    
-    // If image is loaded, draw it at screen coordinates
     if (image.complete && image.naturalWidth !== 0) {
       ctx.drawImage(image, screenX, screenY, this.width, this.height);
     } else {
-      // Fallback to drawing shapes if images don't load
+      // Fallback: vẽ hình dạng mặc định
       ctx.fillStyle = this.color;
       ctx.beginPath();
-      
       switch (this.type) {
         case 'health':
-          // Heart shape for health (adjusted for screen coordinates)
           ctx.moveTo(screenX, screenY + this.height * 0.3);
           ctx.bezierCurveTo(
             screenX, screenY,
@@ -100,15 +104,12 @@ class Resource {
           );
           break;
         case 'gold':
-          // Circle for gold
           ctx.arc(screenX + this.width/2, screenY + this.height/2, this.width/2, 0, Math.PI * 2);
           break;
         case 'experience':
-          // Star shape for experience
           this.drawStar(ctx, screenX + this.width/2, screenY + this.height/2, 5, this.width/2, this.width/4);
           break;
         case 'blood':
-          // Diamond shape for blood
           ctx.moveTo(screenX + this.width/2, screenY);
           ctx.lineTo(screenX + this.width, screenY + this.height/2);
           ctx.lineTo(screenX + this.width/2, screenY + this.height);
@@ -116,10 +117,8 @@ class Resource {
           ctx.closePath();
           break;
         default:
-          // Default square
           ctx.fillRect(screenX, screenY, this.width, this.height);
       }
-      
       ctx.fill();
     }
   }

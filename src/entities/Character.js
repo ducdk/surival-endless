@@ -185,6 +185,9 @@ class Character {
   takeDamage(damage) {
     this.health -= damage;
     if (this.health < 0) this.health = 0;
+    if (this.game) {
+      this.game.addStatusEffect('damage', damage);
+    }
   }
 
   heal(amount) {

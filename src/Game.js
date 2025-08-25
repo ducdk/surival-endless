@@ -60,6 +60,7 @@ class Game {
     this.collectionEffects = [];
     this.levelUpEffects = [];
     this.healingEffects = []; // For Health Regeneration display
+    this.statusEffects = []; // Hiệu ứng hiển thị trên thanh máu
     
     // Input handling
     this.keys = {};
@@ -670,6 +671,7 @@ class Game {
     this.updateCollectionEffects(deltaTime);
     this.updateLevelUpEffects(deltaTime);
     this.updateHealingEffects(deltaTime);
+    this.updateStatusEffects(deltaTime);
   }
   
   updateCharacter(deltaTime) {
@@ -869,6 +871,18 @@ class Game {
       
       if (effect.life <= 0) {
         this.healingEffects.splice(i, 1);
+      }
+    }
+  }
+  
+  updateStatusEffects(deltaTime) {
+    // console.log('Status Effects', this.statusEffects);
+    for (let i = this.statusEffects.length - 1; i >= 0; i--) {
+      const effect = this.statusEffects[i];
+      effect.life -= deltaTime;
+      effect.yOffset -= 0.03 * deltaTime; // bay lên nhẹ
+      if (effect.life <= 0) {
+        this.statusEffects.splice(i, 1);
       }
     }
   }
@@ -1178,16 +1192,20 @@ class Game {
           case 'health':
             this.character.heal(collected.value);
             this.totalHealthRecovered += collected.value;
+            this.addStatusEffect('health', collected.value);
             break;
           case 'gold':
             this.character.gold += collected.value;
+            this.addStatusEffect('gold', collected.value);
             break;
           case 'experience':
             this.character.addExperience(collected.value);
+            this.addStatusEffect('experience', collected.value);
             break;
           case 'blood':
             // For now, we'll add blood to gold since there's no separate blood resource system
             this.character.gold += collected.value;
+            this.addStatusEffect('gold', collected.value);
             break;
         }
       }
@@ -1269,7 +1287,7 @@ class Game {
     this.renderCollectionEffects();
     this.renderLevelUpEffects();
     this.renderHealingEffects();
-    
+    this.renderStatusEffects();
     // Render minimap
     this.renderMinimap();
     
@@ -1431,7 +1449,10 @@ class Game {
     // Health text
     this.ctx.fillStyle = 'white';
     this.ctx.fillText(`Health: ${Math.floor(this.character.health)}/${this.character.maxHealth}`, healthBarX + 5, healthBarY + healthBarHeight - 3);
-    
+
+    // Render hiệu ứng status text ngay sau health bar
+    this.renderStatusEffects();
+
     // Render skill boxes at the bottom of the health bar
     this.renderSkillBoxes(healthBarX, healthBarY + healthBarHeight + 10);
     
@@ -1889,6 +1910,7 @@ class Game {
         this.ctx.fillStyle = '#8B4513'; // Brown color for chest
         this.ctx.fillRect(chestX, startY, chestWidth, chestHeight);
         
+        
         // Chest lid
         this.ctx.fillStyle = '#A0522D'; // Darker brown for lid
         this.ctx.fillRect(chestX - 5, startY, chestWidth + 10, 15);
@@ -1928,6 +1950,40 @@ class Game {
     }
     
     return activatedSkill;
+  }
+  
+  // Hiển thị hiệu ứng text khi nhận resource hoặc sát thương
+  addStatusEffect(type, value) {
+    let color = '#2ecc71'; // Health mặc định xanh lá
+    let text = '';
+    switch(type) {
+      case 'health':
+        color = '#2ecc71'; // xanh lá
+        text = `+${Math.floor(value)} HP`;
+        break;
+      case 'gold':
+        color = '#f1c40f'; // vàng
+        text = `+${Math.floor(value)} Coin`;
+        break;
+      case 'experience':
+        color = '#3498db'; // xanh dương
+        text = `+${Math.floor(value)} EXP`;
+        break;
+      case 'damage':
+        color = '#e74c3c'; // đỏ
+        text = `-${Math.floor(value)}`;
+        break;
+      default:
+        text = `${value}`;
+        break;
+    }
+    this.statusEffects.push({
+      text,
+      color,
+      life: 1000, // ms
+      maxLife: 1000,
+      yOffset: 0
+    });
   }
   
   renderAttackEffects() {
@@ -2005,6 +2061,22 @@ class Game {
       this.ctx.textAlign = 'center';
       this.ctx.fillText(`+${Math.floor(effect.amount)}`, effect.x, effect.y);
       this.ctx.textAlign = 'left';
+    }
+  }
+  
+  // Hiển thị hiệu ứng text resource/damage trên thanh máu
+  renderStatusEffects() {
+    const healthBarX = 10;
+    const healthBarY = 130;
+    for (const effect of this.statusEffects) {
+      const alpha = effect.life / effect.maxLife;
+      this.ctx.font = 'bold 18px Arial';
+      this.ctx.fillStyle = effect.color;
+      this.ctx.globalAlpha = alpha;
+      this.ctx.textAlign = 'left';
+      // Vị trí text phía trên health bar, bay lên theo yOffset
+      this.ctx.fillText(effect.text, healthBarX + 160, healthBarY + 10 + effect.yOffset);
+      this.ctx.globalAlpha = 1;
     }
   }
   
@@ -2189,6 +2261,11 @@ class Game {
       const x = startX + col * columnWidth;
       const y = startY + row * (itemHeight + itemSpacing);
       
+      // Check if the item is outside the visible area
+      if (y > startY + maxHeight) {
+        break; // Stop rendering if we've exceeded the maximum height
+      }
+      
       // Item background
       this.ctx.fillStyle = '#2c3e50';
       this.ctx.fillRect(x, y, itemWidth, itemHeight);
@@ -2327,6 +2404,11 @@ class Game {
       const row = Math.floor(i / columns);
       const x = startX + col * columnWidth;
       const y = startY + row * (skillHeight + skillSpacing);
+      
+      // Check if the skill box is outside the visible area
+      if (y > startY + maxHeight) {
+        break; // Stop rendering if we've exceeded the maximum height
+      }
       
       const skill = availableSkills[i];
       
@@ -2483,6 +2565,8 @@ class Game {
     this.deathEffects = [];
     this.collectionEffects = [];
     this.levelUpEffects = [];
+    this.healingEffects = []; // For Health Regeneration display
+    this.statusEffects = []; // Hiệu ứng hiển thị trên thanh máu
     this.spawnTimer = 0;
     this.spawnInterval = 1000;
     
@@ -2515,6 +2599,8 @@ class Game {
     this.deathEffects = [];
     this.collectionEffects = [];
     this.levelUpEffects = [];
+    this.healingEffects = []; // For Health Regeneration display
+    this.statusEffects = []; // Hiệu ứng hiển thị trên thanh máu
     this.spawnTimer = 0;
     this.spawnInterval = 1000;
   }
