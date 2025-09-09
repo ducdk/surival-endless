@@ -1,4 +1,5 @@
 import Game from './Game.js';
+import apiClient from './apiClient.js';
 
 // Initialize game when page loads
 document.addEventListener('DOMContentLoaded', () => {

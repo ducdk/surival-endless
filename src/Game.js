@@ -4,6 +4,7 @@ import Resource from './entities/Resource.js';
 import Equipment from './entities/Equipment.js';
 import ImageCache from './entities/ImageCache.js';
 import SoundManager from './SoundManager.js';
+import apiClient from './apiClient.js';
 
 class Game {
   constructor(canvas) {
@@ -30,7 +31,12 @@ class Game {
     this.username = localStorage.getItem('endlessSurvivalUsername') || '';
     
     // Game state
-    this.state = this.username ? 'welcome' : 'username'; // 'username', 'welcome', 'playing', 'gameOver', 'shop', 'reward', 'profile'
+    // Check if user is authenticated, otherwise show login screen
+    if (apiClient.isAuthenticated()) {
+      this.state = 'welcome';
+    } else {
+      this.state = 'login'; // New state for login screen
+    }
     this.previousState = null; // Track the state we came from when entering shop
     this.score = 0;
     this.gameTime = 0;
@@ -99,6 +105,54 @@ class Game {
   }
   
   setupEventListeners() {
+    // Add login/register event listeners
+    document.getElementById('loginTab')?.addEventListener('click', () => {
+      document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('registerForm').style.display = 'none';
+      document.getElementById('loginTab').classList.add('active');
+      document.getElementById('registerTab').classList.remove('active');
+    });
+
+    document.getElementById('registerTab')?.addEventListener('click', () => {
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('registerForm').style.display = 'block';
+      document.getElementById('loginTab').classList.remove('active');
+      document.getElementById('registerTab').classList.add('active');
+    });
+
+    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      
+      try {
+        await apiClient.login(email, password);
+        await this.loadUserDataFromServer();
+        this.state = 'welcome';
+        this.toggleHeader(true);
+        document.getElementById('loginScreen').style.display = 'none';
+      } catch (error) {
+        document.getElementById('loginError').textContent = error.message;
+      }
+    });
+
+    document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('registerUsername').value;
+      const email = document.getElementById('registerEmail').value;
+      const password = document.getElementById('registerPassword').value;
+      
+      try {
+        await apiClient.register(username, email, password);
+        this.username = username;
+        this.state = 'welcome';
+        this.toggleHeader(true);
+        document.getElementById('loginScreen').style.display = 'none';
+      } catch (error) {
+        document.getElementById('registerError').textContent = error.message;
+      }
+    });
+  
     // Keyboard input
     window.addEventListener('keydown', (e) => {
       this.keys[e.key] = true;
@@ -241,6 +295,16 @@ class Game {
       profileButton.addEventListener('click', () => {
         this.state = 'profile';
         // Ẩn header khi vào profile
+        this.toggleHeader(false);
+      });
+    }
+    
+    const logoutButton = document.getElementById('logoutButton');
+    if (logoutButton) {
+      logoutButton.addEventListener('click', () => {
+        apiClient.logout();
+        this.state = 'login';
+        // Ẩn header khi logout
         this.toggleHeader(false);
       });
     }
@@ -1379,20 +1443,32 @@ class Game {
   }
   
   renderUI() {
-    // Username screen
-    if (this.state === 'username') {
-      // Hide canvas and welcome screen, show username screen
+    // Login screen
+    if (this.state === 'login') {
+      // Hide canvas, welcome screen and username screen, show login screen
       document.getElementById('gameCanvas').style.display = 'none';
       document.getElementById('welcomeScreen').style.display = 'none';
+      document.getElementById('usernameScreen').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'block';
+      return;
+    }
+    
+    // Username screen
+    if (this.state === 'username') {
+      // Hide canvas, welcome screen and login screen, show username screen
+      document.getElementById('gameCanvas').style.display = 'none';
+      document.getElementById('welcomeScreen').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('usernameScreen').style.display = 'block';
       return;
     }
     
     // Welcome screen
     if (this.state === 'welcome') {
-      // Hide canvas and username screen, show welcome screen
+      // Hide canvas, username screen and login screen, show welcome screen
       document.getElementById('gameCanvas').style.display = 'none';
       document.getElementById('usernameScreen').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('welcomeScreen').style.display = 'block';
       
       // Update character info
@@ -1403,6 +1479,7 @@ class Game {
       document.getElementById('gameCanvas').style.display = 'block';
       document.getElementById('welcomeScreen').style.display = 'none';
       document.getElementById('usernameScreen').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'none';
     }
     
     // Profile screen
@@ -2606,25 +2683,29 @@ class Game {
   }
   
   saveUserData() {
-    const userData = {
-      maxHealth: this.character.maxHealth,
-      damage: this.character.damage,
-      speed: this.character.speed,
-      level: this.character.level,
-      experience: this.character.experience,
-      experienceToNextLevel: this.character.experienceToNextLevel,
-      gold: this.character.gold,
-      inventory: this.character.inventory.map(item => ({
-        type: item.type,
-        level: item.level
-      })),
-      skills: this.character.skills.map(skill => ({
-        name: skill.name,
-        currentLevel: skill.currentLevel
-      }))
-    };
-    
-    localStorage.setItem('endlessSurvivalUserData', JSON.stringify(userData));
+    // Try to save to backend first
+    this.saveUserDataToServer().catch(() => {
+      // Fall back to localStorage if server save fails
+      const userData = {
+        maxHealth: this.character.maxHealth,
+        damage: this.character.damage,
+        speed: this.character.speed,
+        level: this.character.level,
+        experience: this.character.experience,
+        experienceToNextLevel: this.character.experienceToNextLevel,
+        gold: this.character.gold,
+        inventory: this.character.inventory.map(item => ({
+          type: item.type,
+          level: item.level
+        })),
+        skills: this.character.skills.map(skill => ({
+          name: skill.name,
+          currentLevel: skill.currentLevel
+        }))
+      };
+      
+      localStorage.setItem('endlessSurvivalUserData', JSON.stringify(userData));
+    });
   }
   
   generateChests() {
@@ -2698,21 +2779,23 @@ class Game {
     localStorage.setItem('endlessSurvivalSave', JSON.stringify(gameState));
   }
   
-  loadUserData() {
-    const userData = localStorage.getItem('endlessSurvivalUserData');
-    if (!userData) return false;
-    
+  async loadUserDataFromServer() {
     try {
-      const data = JSON.parse(userData);
+      if (!apiClient.isAuthenticated()) return false;
+      
+      const response = await apiClient.getGameData();
+      const data = response.data.gameData;
+      
+      if (!data) return false;
       
       // Restore character state
-      this.character.maxHealth = data.maxHealth || this.character.maxHealth;
-      this.character.damage = data.damage || this.character.damage;
-      this.character.speed = data.speed || this.character.speed;
-      this.character.level = data.level || this.character.level;
-      this.character.experience = data.experience || this.character.experience;
-      this.character.experienceToNextLevel = data.experienceToNextLevel || this.character.experienceToNextLevel;
-      this.character.gold = data.gold || this.character.gold;
+      this.character.maxHealth = data.character.maxHealth || this.character.maxHealth;
+      this.character.damage = data.character.damage || this.character.damage;
+      this.character.speed = data.character.speed || this.character.speed;
+      this.character.level = data.character.level || this.character.level;
+      this.character.experience = data.character.experience || this.character.experience;
+      this.character.experienceToNextLevel = data.character.experienceToNextLevel || this.character.experienceToNextLevel;
+      this.character.gold = data.character.gold || this.character.gold;
       
       // Restore equipment
       if (data.inventory) {
@@ -2737,10 +2820,93 @@ class Game {
       this.updateWelcomeScreenInfo();
       
       return true;
-    } catch (e) {
-      console.error('Failed to load user data:', e);
+    } catch (error) {
+      console.error('Failed to load user data from server:', error);
       return false;
     }
+  }
+
+  async saveUserDataToServer() {
+    try {
+      if (!apiClient.isAuthenticated()) return false;
+      
+      const userData = {
+        character: {
+          maxHealth: this.character.maxHealth,
+          damage: this.character.damage,
+          speed: this.character.speed,
+          level: this.character.level,
+          experience: this.character.experience,
+          experienceToNextLevel: this.character.experienceToNextLevel,
+          gold: this.character.gold
+        },
+        inventory: this.character.inventory.map(item => ({
+          type: item.type,
+          level: item.level
+        })),
+        skills: this.character.skills.map(skill => ({
+          name: skill.name,
+          currentLevel: skill.currentLevel
+        }))
+      };
+      
+      await apiClient.updateGameData(userData);
+      return true;
+    } catch (error) {
+      console.error('Failed to save user data to server:', error);
+      return false;
+    }
+  }
+  
+  loadUserData() {
+    // Try to load from backend first
+    this.loadUserDataFromServer().then(success => {
+      if (!success) {
+        // Fall back to localStorage if server load fails
+        const userData = localStorage.getItem('endlessSurvivalUserData');
+        if (!userData) return false;
+        
+        try {
+          const data = JSON.parse(userData);
+          
+          // Restore character state
+          this.character.maxHealth = data.maxHealth || this.character.maxHealth;
+          this.character.damage = data.damage || this.character.damage;
+          this.character.speed = data.speed || this.character.speed;
+          this.character.level = data.level || this.character.level;
+          this.character.experience = data.experience || this.character.experience;
+          this.character.experienceToNextLevel = data.experienceToNextLevel || this.character.experienceToNextLevel;
+          this.character.gold = data.gold || this.character.gold;
+          
+          // Restore equipment
+          if (data.inventory) {
+            this.character.inventory = [];
+            for (const itemData of data.inventory) {
+              const equipment = new Equipment(itemData.type, itemData.level);
+              this.character.addEquipment(equipment);
+            }
+          }
+          
+          // Restore skills
+          if (data.skills) {
+            for (const skillData of data.skills) {
+              const skill = this.character.skills.find(s => s.name === skillData.name);
+              if (skill) {
+                skill.currentLevel = skillData.currentLevel;
+              }
+            }
+          }
+          
+          // Update welcome screen info
+          this.updateWelcomeScreenInfo();
+          
+          return true;
+        } catch (e) {
+          console.error('Failed to load user data from localStorage:', e);
+          return false;
+        }
+      }
+    });
   }
   
   resizeCanvas() {
@@ -3079,70 +3245,70 @@ class Game {
     }
     
     // Update character stats
-    const healthElement = document.getElementById('characterHealth');
-    if (healthElement) {
-      healthElement.textContent = this.character.maxHealth;
-    }
+    // const healthElement = document.getElementById('characterHealth');
+    // if (healthElement) {
+    //   healthElement.textContent = this.character.maxHealth;
+    // }
     
-    const damageElement = document.getElementById('characterDamage');
-    if (damageElement) {
-      // Include equipment bonus in damage display
-      const equipmentBonus = this.character.getEquipmentBonus('damage');
-      damageElement.textContent = `${this.character.damage} (+${equipmentBonus})`;
-    }
+    // const damageElement = document.getElementById('characterDamage');
+    // if (damageElement) {
+    //   // Include equipment bonus in damage display
+    //   const equipmentBonus = this.character.getEquipmentBonus('damage');
+    //   damageElement.textContent = `${this.character.damage} (+${equipmentBonus})`;
+    // }
     
-    const speedElement = document.getElementById('characterSpeed');
-    if (speedElement) {
-      // Include equipment bonus in speed display
-      const equipmentBonus = this.character.getEquipmentBonus('speed');
-      speedElement.textContent = `${this.character.speed} (+${equipmentBonus})`;
-    }
+    // const speedElement = document.getElementById('characterSpeed');
+    // if (speedElement) {
+    //   // Include equipment bonus in speed display
+    //   const equipmentBonus = this.character.getEquipmentBonus('speed');
+    //   speedElement.textContent = `${this.character.speed} (+${equipmentBonus})`;
+    // }
     
-    const goldElement = document.getElementById('characterGold');
-    if (goldElement) {
-      goldElement.textContent = this.character.gold;
-    }
+    // const goldElement = document.getElementById('characterGold');
+    // if (goldElement) {
+    //   goldElement.textContent = this.character.gold;
+    // }
     
     // Update equipment list
-    const equipmentListElement = document.getElementById('equipmentList');
-    if (equipmentListElement) {
-      if (this.character.inventory.length === 0) {
-        equipmentListElement.innerHTML = '<p>No equipment purchased yet</p>';
-      } else {
-        let equipmentHTML = '';
-        for (const item of this.character.inventory) {
-          equipmentHTML += `
-            <div class="equipment-item">
-              <strong>${item.icon} ${item.name}</strong> (Level ${item.level})
-              <br>
-              <small>${item.getDescription()}</small>
-            </div>
-          `;
-        }
-        equipmentListElement.innerHTML = equipmentHTML;
-      }
-    }
+    // const equipmentListElement = document.getElementById('equipmentList');
+    // if (equipmentListElement) {
+    //   if (this.character.inventory.length === 0) {
+    //     equipmentListElement.innerHTML = '<p>No equipment purchased yet</p>';
+    //   } else {
+    //     let equipmentHTML = '';
+    //     for (const item of this.character.inventory) {
+    //       equipmentHTML += `
+    //         <div class="equipment-item">
+    //           <strong>${item.icon} ${item.name}</strong> (Level ${item.level})
+    //           <br>
+    //           <small>${item.getDescription()}</small>
+    //         </div>
+    //       `;
+    //     }
+    //     equipmentListElement.innerHTML = equipmentHTML;
+    //   }
+    // }
     
-    // Update skills list
-    const skillsListElement = document.getElementById('skillsList');
-    if (skillsListElement) {
-      const unlockedSkills = this.character.getUnlockedSkills();
-      if (unlockedSkills.length === 0) {
-        skillsListElement.innerHTML = '<p>No skills unlocked yet</p>';
-      } else {
-        let skillsHTML = '';
-        for (const skill of unlockedSkills) {
-          skillsHTML += `
-            <div class="skill-item">
-              <strong>${skill.name}</strong> (Level ${skill.currentLevel}/${skill.levels})
-              <br>
-              <small>${skill.getDescription()}</small>
-            </div>
-          `;
-        }
-        skillsListElement.innerHTML = skillsHTML;
-      }
-    }
+    // // Update skills list
+    // const skillsListElement = document.getElementById('skillsList');
+    // if (skillsListElement) {
+    //   const unlockedSkills = this.character.getUnlockedSkills();
+    //   if (unlockedSkills.length === 0) {
+    //     skillsListElement.innerHTML = '<p>No skills unlocked yet</p>';
+    //   } else {
+    //     let skillsHTML = '';
+    //     for (const skill of unlockedSkills) {
+    //       skillsHTML += `
+    //         <div class="skill-item">
+    //           <strong>${skill.name}</strong> (Level ${skill.currentLevel}/${skill.levels})
+    //           <br>
+    //           <small>${skill.getDescription()}</small>
+    //         </div>
+    //       `;
+    //     }
+    //     skillsListElement.innerHTML = skillsHTML;
+    //   }
+    // }
   }
   
 

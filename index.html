@@ -38,6 +38,44 @@
     <div class="game-container">
         <canvas id="gameCanvas"></canvas>
         
+        <!-- Login Screen -->
+        <div id="loginScreen" class="login-screen">
+            <h1 class="game-title">ENDLESS SURVIVAL</h1>
+            <p class="game-subtitle">Login or Register to continue</p>
+            
+            <div class="tabs">
+                <button id="loginTab" class="tab active">Login</button>
+                <button id="registerTab" class="tab">Register</button>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <input type="email" id="loginEmail" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="loginPassword" placeholder="Password" required>
+                </div>
+                <p id="loginError" class="error-message"></p>
+                <button type="submit" class="game-button">Login</button>
+            </form>
+            
+            <!-- Register Form -->
+            <form id="registerForm" class="auth-form" style="display:none">
+                <div class="form-group">
+                    <input type="text" id="registerUsername" placeholder="Username" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="registerEmail" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="registerPassword" placeholder="Password (min 8 chars)" required>
+                </div>
+                <p id="registerError" class="error-message"></p>
+                <button type="submit" class="game-button">Register</button>
+            </form>
+        </div>
+        
         <!-- Username Screen -->
         <div id="usernameScreen" class="username-screen">
             <h1 class="game-title">ENDLESS SURVIVAL</h1>
@@ -60,9 +98,49 @@
                 <button id="startButton" class="game-button">Start Game</button>
                 <button id="shopButton" class="game-button">Shop (P)</button>
                 <button id="profileButton" class="game-button">Profile</button>
+                <button id="logoutButton" class="game-button">Logout</button>
             </div>
             
             <div class="" style="overflow: auto; max-height: 67.5vh;">
+                <!-- Character Stats -->
+                <!-- <div class="character-info">
+                    <h2>Character Stats</h2>
+                    <div class="character-stats">
+                        <div class="stat">
+                            <span class="stat-label">Health:</span>
+                            <span class="stat-value" id="characterHealth">500</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Damage:</span>
+                            <span class="stat-value" id="characterDamage">50</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Speed:</span>
+                            <span class="stat-value" id="characterSpeed">6</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Gold:</span>
+                            <span class="stat-value" id="characterGold">0</span>
+                        </div>
+                    </div>
+                </div> -->
+                
+                <!-- Equipment List -->
+                <!-- <div class="equipment-info">
+                    <h2>Equipment</h2>
+                    <div class="equipment-list" id="equipmentList">
+                        <p>No equipment purchased yet</p>
+                    </div>
+                </div> -->
+                
+                <!-- Skills List -->
+                <!-- <div class="skills-info">
+                    <h2>Skills</h2>
+                    <div class="skills-list" id="skillsList">
+                        <p>No skills unlocked yet</p>
+                    </div>
+                </div> -->
+            
                 <div class="instructions" style="margin-top: 16px;">
                     <h2>How to Play</h2>
                     <ul>
