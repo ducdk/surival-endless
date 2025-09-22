@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="description" content="Endless Survival Game - Survive as long as possible against endless waves of monsters.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Endless Survival</title>
+
+  <!-- SEO Meta Tags -->
+  <meta property="og:title" content="Endless Survival">
+  <meta property="og:description" content="Survive endless waves of monsters in this exciting web game.">
+  <meta property="og:image" content="assets/logo.png">
+  <meta property="og:url" content="http://your-website-url.com">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Endless Survival">
+  <meta name="twitter:description" content="Survive endless waves of monsters in this exciting web game.">
+  <meta name="twitter:image" content="assets/logo.png">
+
+  <!-- Favicon and Apple Touch Icon -->
+  <link rel="icon" type="image/png" href="assets/favicon/android-chrome-192x192.png">
+  <link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="top-0 left-0 w-full bg-gray-900 text-white flex items-center justify-between px-8 py-4 shadow z-50">
+        <div class="flex items-center">
+            <a href="index.html">
+                <img src="assets/logo.png" alt="Endless Survival Logo" class="h-10 w-10 rounded" />
+            </a>
+        </div>
+        <nav class="flex gap-8">
+            <a href="index.html" class="hover:text-yellow-400 font-semibold">Home</a>
+            <a href="term.html" class="hover:text-yellow-400 font-semibold">Terms</a>
+            <a href="policy.html" class="hover:text-yellow-400 font-semibold">Privacy Policy</a>
+        </nav>
+    </header>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- Login Screen -->
+        <div id="loginScreen" class="login-screen">
+            <h1 class="game-title">ENDLESS SURVIVAL</h1>
+            <p class="game-subtitle">Login or Register to continue</p>
+            
+            <div class="tabs">
+                <button id="loginTab" class="tab active">Login</button>
+                <button id="registerTab" class="tab">Register</button>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <input type="email" id="loginEmail" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="loginPassword" placeholder="Password" required>
+                </div>
+                <p id="loginError" class="error-message"></p>
+                <button type="submit" class="game-button">Login</button>
+            </form>
+            
+            <!-- Register Form -->
+            <form id="registerForm" class="auth-form" style="display:none">
+                <div class="form-group">
+                    <input type="text" id="registerUsername" placeholder="Username" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="registerEmail" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="registerPassword" placeholder="Password (min 8 chars)" required>
+                </div>
+                <p id="registerError" class="error-message"></p>
+                <button type="submit" class="game-button">Register</button>
+            </form>
+        </div>
+        
+        <!-- Username Screen -->
+        <div id="usernameScreen" class="username-screen">
+            <h1 class="game-title">ENDLESS SURVIVAL</h1>
+            <p class="game-subtitle">Create your warrior</p>
+            
+            <div class="username-container">
+                <input type="text" id="usernameInput" placeholder="Enter your warrior name" maxlength="20">
+                <p id="usernameError" class="error-message"></p>
+                <button id="submitUsername" class="game-button">Start Your Journey</button>
+            </div>
+        </div>
+        
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="welcome-screen">
+            <h1 class="game-title">ENDLESS SURVIVAL</h1>
+            <p class="game-subtitle">Survive as long as possible against endless waves of monsters</p>
+            
+            <!-- Buttons -->
+            <div class="welcome-buttons">
+                <button id="startButton" class="game-button">Start Game</button>
+                <button id="shopButton" class="game-button">Shop (P)</button>
+                <button id="profileButton" class="game-button">Profile</button>
+                <button id="logoutButton" class="game-button">Logout</button>
+            </div>
+            
+            <div class="" style="overflow: auto; max-height: 67.5vh;">
+                <!-- Character Stats -->
+                <!-- <div class="character-info">
+                    <h2>Character Stats</h2>
+                    <div class="character-stats">
+                        <div class="stat">
+                            <span class="stat-label">Health:</span>
+                            <span class="stat-value" id="characterHealth">500</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Damage:</span>
+                            <span class="stat-value" id="characterDamage">50</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Speed:</span>
+                            <span class="stat-value" id="characterSpeed">6</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Gold:</span>
+                            <span class="stat-value" id="characterGold">0</span>
+                        </div>
+                    </div>
+                </div> -->
+                
+                <!-- Equipment List -->
+                <!-- <div class="equipment-info">
+                    <h2>Equipment</h2>
+                    <div class="equipment-list" id="equipmentList">
+                        <p>No equipment purchased yet</p>
+                    </div>
+                </div> -->
+                
+                <!-- Skills List -->
+                <!-- <div class="skills-info">
+                    <h2>Skills</h2>
+                    <div class="skills-list" id="skillsList">
+                        <p>No skills unlocked yet</p>
+                    </div>
+                </div> -->
+            
+                <div class="instructions" style="margin-top: 16px;">
+                    <h2>How to Play</h2>
+                    <ul>
+                        <li>Use <strong>Arrow Keys</strong> or <strong>WASD</strong> to move</li>
+                        <li>Automatically attack nearby enemies</li>
+                        <li>Collect <span class="health-icon">❤️</span> Health, <span class="gold-icon">💰</span> Gold, and <span class="exp-icon">⚡</span> Experience</li>
+                        <li>Press <strong>P</strong> to open Shop</li>
+                        <li>Press <strong>O</strong> to open Profile</li>
+                        <li>Press <strong>F5</strong> to Save, <strong>F9</strong> to Load</li>
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <script src="src/main.js" type="module"></script>
+</body>
+</html>

@@ -2,160 +2,444 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="description" content="Endless Survival Game - Survive as long as possible against endless waves of monsters.">
+  <meta name="description" content="Endless Survival - An exciting web game where you face endless waves of monsters, collect resources, and upgrade your character.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Endless Survival</title>
+  <meta name="keywords" content="endless survival, web game, survival game, monster fighting, rpg game, browser game, action game">
+  <title>Endless Survival - The Ultimate Monster Fighting Web Game</title>
 
-  <!-- SEO Meta Tags -->
-  <meta property="og:title" content="Endless Survival">
-  <meta property="og:description" content="Survive endless waves of monsters in this exciting web game.">
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="Endless Survival - The Ultimate Monster Fighting Web Game">
+  <meta property="og:description" content="Face endless waves of monsters, collect resources, upgrade your character, and survive as long as possible in this exciting web game.">
   <meta property="og:image" content="assets/logo.png">
-  <meta property="og:url" content="http://your-website-url.com">
+  <meta property="og:url" content="https://your-website.com">
+  <meta property="og:type" content="website">
+
+  <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Endless Survival">
-  <meta name="twitter:description" content="Survive endless waves of monsters in this exciting web game.">
+  <meta name="twitter:title" content="Endless Survival - The Ultimate Monster Fighting Web Game">
+  <meta name="twitter:description" content="Face endless waves of monsters, collect resources, upgrade your character, and survive as long as possible.">
   <meta name="twitter:image" content="assets/logo.png">
 
-  <!-- Favicon and Apple Touch Icon -->
+  <!-- Favicon -->
   <link rel="icon" type="image/png" href="assets/favicon/android-chrome-192x192.png">
   <link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
 
+  <!-- Stylesheets -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link href="assets/css/landing-styles.css" rel="stylesheet">
 </head>
 <body>
-    <header class="top-0 left-0 w-full bg-gray-900 text-white flex items-center justify-between px-8 py-4 shadow z-50">
-        <div class="flex items-center">
-            <a href="index.html">
-                <img src="assets/logo.png" alt="Endless Survival Logo" class="h-10 w-10 rounded" />
-            </a>
-        </div>
-        <nav class="flex gap-8">
-            <a href="term.html" class="hover:text-yellow-400 font-semibold">Terms</a>
-            <a href="policy.html" class="hover:text-yellow-400 font-semibold">Privacy Policy</a>
-        </nav>
-    </header>
-    <div class="game-container">
-        <canvas id="gameCanvas"></canvas>
-        
-        <!-- Login Screen -->
-        <div id="loginScreen" class="login-screen">
-            <h1 class="game-title">ENDLESS SURVIVAL</h1>
-            <p class="game-subtitle">Login or Register to continue</p>
-            
-            <div class="tabs">
-                <button id="loginTab" class="tab active">Login</button>
-                <button id="registerTab" class="tab">Register</button>
-            </div>
-            
-            <!-- Login Form -->
-            <form id="loginForm" class="auth-form">
-                <div class="form-group">
-                    <input type="email" id="loginEmail" placeholder="Email" required>
+    <header class="landing-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <img src="assets/logo.png" alt="Endless Survival Logo" style="height: 40px;">
+                    <h1>ENDLESS SURVIVAL</h1>
                 </div>
-                <div class="form-group">
-                    <input type="password" id="loginPassword" placeholder="Password" required>
-                </div>
-                <p id="loginError" class="error-message"></p>
-                <button type="submit" class="game-button">Login</button>
-            </form>
-            
-            <!-- Register Form -->
-            <form id="registerForm" class="auth-form" style="display:none">
-                <div class="form-group">
-                    <input type="text" id="registerUsername" placeholder="Username" required>
-                </div>
-                <div class="form-group">
-                    <input type="email" id="registerEmail" placeholder="Email" required>
-                </div>
-                <div class="form-group">
-                    <input type="password" id="registerPassword" placeholder="Password (min 8 chars)" required>
-                </div>
-                <p id="registerError" class="error-message"></p>
-                <button type="submit" class="game-button">Register</button>
-            </form>
-        </div>
-        
-        <!-- Username Screen -->
-        <div id="usernameScreen" class="username-screen">
-            <h1 class="game-title">ENDLESS SURVIVAL</h1>
-            <p class="game-subtitle">Create your warrior</p>
-            
-            <div class="username-container">
-                <input type="text" id="usernameInput" placeholder="Enter your warrior name" maxlength="20">
-                <p id="usernameError" class="error-message"></p>
-                <button id="submitUsername" class="game-button">Start Your Journey</button>
-            </div>
-        </div>
-        
-        <!-- Welcome Screen -->
-        <div id="welcomeScreen" class="welcome-screen">
-            <h1 class="game-title">ENDLESS SURVIVAL</h1>
-            <p class="game-subtitle">Survive as long as possible against endless waves of monsters</p>
-            
-            <!-- Buttons -->
-            <div class="welcome-buttons">
-                <button id="startButton" class="game-button">Start Game</button>
-                <button id="shopButton" class="game-button">Shop (P)</button>
-                <button id="profileButton" class="game-button">Profile</button>
-                <button id="logoutButton" class="game-button">Logout</button>
-            </div>
-            
-            <div class="" style="overflow: auto; max-height: 67.5vh;">
-                <!-- Character Stats -->
-                <!-- <div class="character-info">
-                    <h2>Character Stats</h2>
-                    <div class="character-stats">
-                        <div class="stat">
-                            <span class="stat-label">Health:</span>
-                            <span class="stat-value" id="characterHealth">500</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-label">Damage:</span>
-                            <span class="stat-value" id="characterDamage">50</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-label">Speed:</span>
-                            <span class="stat-value" id="characterSpeed">6</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-label">Gold:</span>
-                            <span class="stat-value" id="characterGold">0</span>
-                        </div>
-                    </div>
-                </div> -->
-                
-                <!-- Equipment List -->
-                <!-- <div class="equipment-info">
-                    <h2>Equipment</h2>
-                    <div class="equipment-list" id="equipmentList">
-                        <p>No equipment purchased yet</p>
-                    </div>
-                </div> -->
-                
-                <!-- Skills List -->
-                <!-- <div class="skills-info">
-                    <h2>Skills</h2>
-                    <div class="skills-list" id="skillsList">
-                        <p>No skills unlocked yet</p>
-                    </div>
-                </div> -->
-            
-                <div class="instructions" style="margin-top: 16px;">
-                    <h2>How to Play</h2>
+                <nav class="main-nav">
                     <ul>
-                        <li>Use <strong>Arrow Keys</strong> or <strong>WASD</strong> to move</li>
-                        <li>Automatically attack nearby enemies</li>
-                        <li>Collect <span class="health-icon">❤️</span> Health, <span class="gold-icon">💰</span> Gold, and <span class="exp-icon">⚡</span> Experience</li>
-                        <li>Press <strong>P</strong> to open Shop</li>
-                        <li>Press <strong>O</strong> to open Profile</li>
-                        <li>Press <strong>F5</strong> to Save, <strong>F9</strong> to Load</li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#gameplay">Gameplay</a></li>
+                        <li><a href="#characters">Character</a></li>
+                        <li><a href="#monsters">Monsters</a></li>
+                        <li><a href="#faq">FAQ</a></li>
+                        <li><a href="game.html" class="cta-button primary">Play Now</a></li>
+                    </ul>
+                    <button class="hamburger" aria-expanded="false" aria-label="Menu Toggle">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+        <!-- Mobile menu -->
+        <div class="mobile-menu">
+            <ul>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#gameplay">Gameplay</a></li>
+                <li><a href="#characters">Character</a></li>
+                <li><a href="#monsters">Monsters</a></li>
+                <li><a href="#faq">FAQ</a></li>
+                <li><a href="game.html" class="cta-button primary">Play Now</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>ENDLESS SURVIVAL</h1>
+                    <h2>Your Ultimate Battle Against Endless Waves of Monsters</h2>
+                    <p>Survive, collect resources, upgrade equipment, and face increasingly difficult challenges in this thrilling web game.</p>
+                    <div class="cta-buttons">
+                        <a href="game.html" class="cta-button primary">Play Now</a>
+                        <a href="#features" class="cta-button secondary">Learn More</a>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <img src="assets/character.png" alt="Endless Survival Character" class="animated">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Game Features</h2>
+            <div class="features-grid">
+                <div class="feature-card animated">
+                    <div class="feature-icon">🎮</div>
+                    <h3>Endless Gameplay</h3>
+                    <p>Face waves of monsters that get progressively harder as you survive longer</p>
+                </div>
+                <div class="feature-card animated">
+                    <div class="feature-icon">⚔️</div>
+                    <h3>Equipment System</h3>
+                    <p>Collect and upgrade swords, shields, boots, and amulets to enhance your character</p>
+                </div>
+                <div class="feature-card animated">
+                    <div class="feature-icon">📈</div>
+                    <h3>Character Progression</h3>
+                    <p>Level up and choose attribute upgrades to match your playstyle</p>
+                </div>
+                <div class="feature-card animated">
+                    <div class="feature-icon">🧙</div>
+                    <h3>Skill System</h3>
+                    <p>Unlock and upgrade powerful skills like Whirlwind, Power Attack, and Health Regeneration</p>
+                </div>
+                <div class="feature-card animated">
+                    <div class="feature-icon">☁️</div>
+                    <h3>Cloud Saving</h3>
+                    <p>Your progress is automatically saved to our servers so you can continue your adventure anytime</p>
+                </div>
+                <div class="feature-card animated">
+                    <div class="feature-icon">🏆</div>
+                    <h3>Challenge Yourself</h3>
+                    <p>How long can you survive? Push your limits and improve your strategy</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="gameplay" class="gameplay">
+        <div class="container">
+            <h2 class="section-title">Gameplay Preview</h2>
+            <div class="gameplay-preview">
+                <div class="gameplay-video animated">
+                    <div class="aspect-ratio">
+                        <!-- Replace with actual gameplay video or animated GIF -->
+                        <img src="assets/character.png" alt="Gameplay Preview">
+                        <div class="video-overlay">
+                            <div class="play-button">
+                                <svg viewBox="0 0 24 24" fill="white">
+                                    <polygon points="5,3 19,12 5,21"></polygon>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="gameplay-description animated">
+                    <h3>Intense Action-Packed Combat</h3>
+                    <p>Fight your way through hordes of monsters, collect resources, and upgrade your equipment to become stronger. Can you survive the endless onslaught?</p>
+                    <ul class="gameplay-features">
+                        <li>
+                            <svg class="feature-check" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"></path>
+                            </svg>
+                            Automatic combat with strategic movement
+                        </li>
+                        <li>
+                            <svg class="feature-check" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"></path>
+                            </svg>
+                            Resource collection system
+                        </li>
+                        <li>
+                            <svg class="feature-check" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"></path>
+                            </svg>
+                            Real-time character progression
+                        </li>
+                        <li>
+                            <svg class="feature-check" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"></path>
+                            </svg>
+                            Multiple enemy types with different behaviors
+                        </li>
+                        <li>
+                            <svg class="feature-check" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"></path>
+                            </svg>
+                            Boss encounters for extra challenge
+                        </li>
                     </ul>
                 </div>
-                
             </div>
         </div>
-    </div>
-    <script src="src/main.js" type="module"></script>
+    </section>
+
+    <section id="characters" class="characters">
+        <div class="container">
+            <h2 class="section-title">Character & Equipment</h2>
+            <div class="character-showcase">
+                <div class="character-image animated">
+                    <img src="assets/character_g.gif" alt="Character">
+                </div>
+                <div class="equipment-grid">
+                    <div class="equipment-item animated">
+                        <img src="assets/equipment/sword.png" alt="Sword">
+                        <h4>Sword</h4>
+                        <p>Increases damage to defeat monsters faster</p>
+                    </div>
+                    <div class="equipment-item animated">
+                        <img src="assets/equipment/shield.png" alt="Shield">
+                        <h4>Shield</h4>
+                        <p>Increases health to survive longer</p>
+                    </div>
+                    <div class="equipment-item animated">
+                        <img src="assets/equipment/boots.png" alt="Boots">
+                        <h4>Boots</h4>
+                        <p>Increases movement speed to avoid danger</p>
+                    </div>
+                    <div class="equipment-item animated">
+                        <img src="assets/equipment/amulet.png" alt="Amulet">
+                        <h4>Amulet</h4>
+                        <p>Provides special bonuses and enhancements</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="monsters" class="monsters">
+        <div class="container">
+            <h2 class="section-title">Monster Gallery</h2>
+            <p class="section-intro">Face a variety of increasingly dangerous enemies as you progress</p>
+            <div class="monster-carousel">
+                <div class="monster-card animated">
+                    <div class="monster-image">
+                        <img src="assets/monster/normal.png" alt="Normal Monster">
+                    </div>
+                    <div class="monster-info">
+                        <h4>Normal Monster</h4>
+                        <p>Basic enemies with balanced stats</p>
+                    </div>
+                </div>
+                <div class="monster-card animated">
+                    <div class="monster-image">
+                        <img src="assets/monster/tank.png" alt="Tanker Monster">
+                    </div>
+                    <div class="monster-info">
+                        <h4>Tanker</h4>
+                        <p>High health, low speed monsters</p>
+                    </div>
+                </div>
+                <div class="monster-card animated">
+                    <div class="monster-image">
+                        <img src="assets/monster/fast.png" alt="Fast Monster">
+                    </div>
+                    <div class="monster-info">
+                        <h4>Fast Monster</h4>
+                        <p>High speed, low health enemies that chase you quickly</p>
+                    </div>
+                </div>
+                <div class="monster-card animated">
+                    <div class="monster-image">
+                        <img src="assets/monster/ranged.png" alt="Ranged Monster">
+                    </div>
+                    <div class="monster-info">
+                        <h4>Ranged</h4>
+                        <p>Attacks from a distance with projectiles</p>
+                    </div>
+                </div>
+                <div class="monster-card animated">
+                    <div class="monster-image">
+                        <img src="assets/monster/elite.png" alt="Elite Monster">
+                    </div>
+                    <div class="monster-info">
+                        <h4>Elite</h4>
+                        <p>Powerful monsters with complex behavior patterns</p>
+                    </div>
+                </div>
+                <div class="monster-card animated">
+                    <div class="monster-image">
+                        <img src="assets/monster/boss.png" alt="Boss Monster">
+                    </div>
+                    <div class="monster-info">
+                        <h4>Boss</h4>
+                        <p>Fearsome opponents with unique abilities and high stats</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-to-play" class="how-to-play">
+        <div class="container">
+            <h2 class="section-title">How To Play</h2>
+            <div class="controls-guide">
+                <div class="control-group animated">
+                    <h4>Movement</h4>
+                    <p><strong>WASD</strong> or <strong>Arrow Keys</strong> to move your character</p>
+                    <div class="key-controls">
+                        <div class="key">W</div>
+                        <div class="key-row">
+                            <div class="key">A</div>
+                            <div class="key">S</div>
+                            <div class="key">D</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group animated">
+                    <h4>Skills</h4>
+                    <p>Activate powerful abilities to gain an edge in combat</p>
+                    <div class="key-controls">
+                        <div class="key">Q</div>
+                        <div class="key">E</div>
+                        <div class="key">R</div>
+                        <div class="key">F</div>
+                    </div>
+                </div>
+                <div class="control-group animated">
+                    <h4>Interface</h4>
+                    <p>Access game interfaces and manage your character</p>
+                    <div class="interface-controls">
+                        <div class="interface-item">
+                            <div class="key">P</div>
+                            <span>Shop</span>
+                        </div>
+                        <div class="interface-item">
+                            <div class="key">O</div>
+                            <span>Profile</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="testimonials">
+        <div class="container">
+            <h2 class="section-title">What Players Are Saying</h2>
+            <div class="testimonial-slider">
+                <div class="testimonials-container">
+                    <div class="testimonials-track">
+                        <div class="testimonial animated">
+                            <div class="testimonial-inner">
+                                <div class="testimonial-text">
+                                    "This game is addictive! I love how you can keep improving your character between sessions. The combat is simple but engaging."
+                                </div>
+                                <div class="testimonial-author">- Alex S.</div>
+                            </div>
+                        </div>
+                        <div class="testimonial animated">
+                            <div class="testimonial-inner">
+                                <div class="testimonial-text">
+                                    "Perfect game to play during breaks. Quick to get into but has enough depth to keep me coming back."
+                                </div>
+                                <div class="testimonial-author">- Jamie L.</div>
+                            </div>
+                        </div>
+                        <div class="testimonial animated">
+                            <div class="testimonial-inner">
+                                <div class="testimonial-text">
+                                    "The equipment system is really satisfying. I love seeing my character get stronger with each upgrade."
+                                </div>
+                                <div class="testimonial-author">- Morgan W.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-dots">
+                    <button class="testimonial-dot active"></button>
+                    <button class="testimonial-dot"></button>
+                    <button class="testimonial-dot"></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="faq" class="faq">
+        <div class="container">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            <div class="faq-grid">
+                <div class="faq-item animated">
+                    <h4>Is Endless Survival free to play?</h4>
+                    <p>Yes! Endless Survival is completely free to play in your web browser.</p>
+                </div>
+                <div class="faq-item animated">
+                    <h4>Do I need to create an account?</h4>
+                    <p>Creating an account is recommended to save your progress, but you can also play as a guest.</p>
+                </div>
+                <div class="faq-item animated">
+                    <h4>What browsers are supported?</h4>
+                    <p>The game works best on Chrome, Firefox, Safari, and Edge with WebGL support.</p>
+                </div>
+                <div class="faq-item animated">
+                    <h4>Can I play on mobile devices?</h4>
+                    <p>While the game is primarily designed for desktop, it should work on tablets and modern mobile devices.</p>
+                </div>
+                <div class="faq-item animated">
+                    <h4>Will there be new content added?</h4>
+                    <p>Yes! We're constantly working on adding new monsters, equipment, and features.</p>
+                </div>
+                <div class="faq-item animated">
+                    <h4>How do I report bugs?</h4>
+                    <p>Contact us through the support email provided in our Terms of Service page.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="container">
+            <h2>Ready to Begin Your Adventure?</h2>
+            <p>Join thousands of players already battling for survival</p>
+            <a href="game.html" class="cta-button primary large">Play Now For Free</a>
+        </div>
+    </section>
+
+    <footer class="landing-footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-logo">
+                    <img src="assets/logo.png" alt="Endless Survival Logo">
+                    <h3>Endless Survival</h3>
+                </div>
+                <div class="footer-links">
+                    <h4>Links</h4>
+                    <ul>
+                        <li><a href="game.html">Play Game</a></li>
+                        <li><a href="term.html">Terms of Service</a></li>
+                        <li><a href="policy.html">Privacy Policy</a></li>
+                    </ul>
+                </div>
+                <div class="footer-social">
+                    <h4>Follow Us</h4>
+                    <div class="social-icons">
+                        <a href="#" class="social-icon">Twitter</a>
+                        <a href="#" class="social-icon">Discord</a>
+                        <a href="#" class="social-icon">Facebook</a>
+                    </div>
+                </div>
+                <div class="footer-newsletter">
+                    <h4>Stay Updated</h4>
+                    <form class="newsletter-form">
+                        <input type="email" placeholder="Enter your email">
+                        <button type="submit">Subscribe</button>
+                    </form>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 Endless Survival. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="assets/js/landing-script.js"></script>
 </body>
 </html>
